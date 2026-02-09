@@ -1,0 +1,24 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": [
+        "config:recommended"
+    ],
+    // use poetry
+    "enabledManagers": [
+        "poetry"
+    ],
+    "poetry": {
+        "enabled": true
+    },
+    // also update lock files
+    "lockFileMaintenance": {
+        "enabled": true,
+        "automerge": true
+    },
+    // automerge when CI passes
+    "automerge": true,
+    "automergeType": "pr",
+    "automergeStrategy": "squash",
+    // extra
+    "semanticCommits": "enabled"
+}
