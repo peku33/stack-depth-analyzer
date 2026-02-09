@@ -1,8 +1,7 @@
 {
     "$schema": "https://docs.renovatebot.com/renovate-schema.json",
     "extends": [
-        "config:recommended",
-        ":disableDependencyDashboard"
+        "config:recommended"
     ],
     // use poetry
     "enabledManagers": [
@@ -21,5 +20,6 @@
     "automergeType": "pr",
     "automergeStrategy": "squash",
     // extra
-    "semanticCommits": "enabled"
+    "semanticCommits": "enabled",
+    "dependencyDashboard": false
 }
