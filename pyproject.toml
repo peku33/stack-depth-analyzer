@@ -1,0 +1,77 @@
+[project]
+name = "stack-depth-analyzer"
+version = "0.1.0"
+authors = [{ name = "Paweł Kubrak", email = "peku33@gmail.com" }]
+requires-python = "~3.13"
+dynamic = ["dependencies"]
+
+[project.scripts]
+stack-depth-analyzer = "app.__main__:app"
+
+[tool.poetry]
+packages = [{ include = "app", from = "." }]
+
+[tool.poetry.dependencies]
+more-itertools = "^10.7.0"
+pydantic = "^2.12.5"
+pyelftools = "^0.32"
+rich = "^14.1.0"
+typer = "^0.21.1"
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^26.0.0"
+flake8 = "^7.0.0"
+isort = "^7.0.0"
+mypy = "^1.17.1"
+pylint = "^4.0.0"
+
+[tool.black]
+line-length = 120
+target-version = ["py313"]
+
+[tool.isort]
+profile = "black"
+line_length = 120
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+
+[tool.pylint.main]
+load-plugins = """
+    pylint.extensions.typing,
+"""
+
+[tool.pylint.format]
+max-line-length = "120"
+
+[tool.pylint.miscellaneous]
+notes = ["FIXME"]
+
+[tool.pylint.message_control]
+enable = "all"
+disable = """
+    duplicate-code,
+    invalid-name,
+    locally-disabled,
+    missing-class-docstring,
+    missing-function-docstring,
+    missing-module-docstring,
+    no-else-raise,
+    no-else-return,
+    suppressed-message,
+    too-few-public-methods,
+    too-many-branches,
+    too-many-lines,
+    too-many-locals,
+    too-many-return-statements,
+    too-many-statements,
+    unidiomatic-typecheck,
+    unsubscriptable-object,
+    use-implicit-booleaness-not-comparison-to-zero,
+"""
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
