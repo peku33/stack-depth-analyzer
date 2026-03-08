@@ -22,7 +22,7 @@ typer = "^0.21.1"
 [tool.poetry.group.dev.dependencies]
 black = "^26.0.0"
 flake8 = "^7.0.0"
-isort = "^7.0.0"
+isort = "^8.0.0"
 mypy = "^1.17.1"
 pylint = "^4.0.0"
 
