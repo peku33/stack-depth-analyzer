@@ -16,7 +16,7 @@ more-itertools = "^10.7.0"
 pydantic = "^2.12.5"
 pyelftools = "^0.32"
 rich = "^14.1.0"
-typer = "^0.21.1"
+typer = "^0.24.0"
 
 
 [tool.poetry.group.dev.dependencies]
