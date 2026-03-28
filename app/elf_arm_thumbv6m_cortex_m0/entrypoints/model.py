@@ -4,7 +4,8 @@ from functools import cached_property
 
 from more_itertools import is_sorted
 
-from ..common import Address
+from app.elf_arm_thumbv6m.common import Address
+
 from .common import PRIORITY_GROUPS
 
 
@@ -13,6 +14,9 @@ class EntrypointVector:
     address: Address
 
     def __post_init__(self) -> None:
+        # must be positive
+        assert self.address >= 0
+
         # address must be aligned
         assert self.address % 2 == 0
 

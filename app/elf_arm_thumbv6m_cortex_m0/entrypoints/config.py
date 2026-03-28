@@ -6,7 +6,8 @@ from annotated_types import Ge, Lt
 from more_itertools import duplicates_everseen
 from pydantic import BaseModel, Field, RootModel, model_validator
 
-from ..common import Address
+from app.elf_arm_thumbv6m.common import Address
+
 from .common import PRIORITY_GROUPS
 
 

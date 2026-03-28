@@ -1,0 +1,24 @@
+from graphviz import Digraph
+
+from .model import Functions
+
+
+def functions_to_graphviz(functions: Functions) -> Digraph:
+    dot = Digraph()
+
+    # nodes
+    for function in functions.inner:
+        dot.node(  # pyright: ignore[reportUnknownMemberType]
+            str(function.address),
+            label=(" / ".join(function.names))[-16:],
+        )
+
+    # edges
+    for caller in functions.inner:
+        for calle_address in caller.call_addresses:
+            dot.edge(  # pyright: ignore[reportUnknownMemberType]
+                str(caller.address),
+                str(calle_address),
+            )
+
+    return dot  # type: ignore

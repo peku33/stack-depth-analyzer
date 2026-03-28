@@ -1,22 +1,26 @@
-from collections.abc import Collection, Mapping
+from collections.abc import Collection
 from itertools import chain, islice
-from logging import getLogger
 from math import ceil
 
-from ..common import Address, function_like_format
+from app.elf_arm_thumbv6m.functions import model as parent_functions
+from app.elf_arm_thumbv6m.program.model import (
+    Entrypoint,
+    Entrypoints,
+    EntrypointsPriorityGroup,
+    Functions,
+    Program,
+)
+from app.elf_arm_thumbv6m.program.parse import parse_functions, warn_functions_unreachable
+
 from ..entrypoints import model as parent_entrypoints
 from ..entrypoints.common import PRIORITY_GROUPS
-from ..functions import model as parent_functions
-from .model import Entrypoint, Entrypoints, EntrypointsPriorityGroup, Function, Functions, Program
-
-_logger = getLogger(__name__)
 
 
 def parse(
     parent_functions_: parent_functions.Functions, parent_entrypoints_: parent_entrypoints.Entrypoints
 ) -> Program:
     # warn for orphaned functions
-    warn_functions_unreachable(parent_functions_, parent_entrypoints_)
+    warn_functions_unreachable(parent_functions_, parent_entrypoints_.addresses)
 
     # resolve functions
     functions = parse_functions(parent_functions_)
@@ -28,100 +32,6 @@ def parse(
         functions=functions,
         entrypoints=entrypoints,
     )
-
-
-def warn_functions_unreachable(
-    parent_functions_: parent_functions.Functions, parent_entrypoints_: parent_entrypoints.Entrypoints
-) -> None:
-    # start with all functions
-    function_addresses_not_called = {function.address for function in parent_functions_.inner}
-
-    # remove called
-    for function in parent_functions_.inner:
-        function_addresses_not_called -= function.call_addresses
-
-    # remove pointed by entrypoints
-    function_addresses_not_called -= parent_entrypoints_.addresses
-
-    # we should be left with not called
-    for function_address_not_called in function_addresses_not_called:
-        _logger.warning(
-            "Function %s has no calls. Make sure entrypoints are properly configured.",
-            function_like_format(parent_functions_.by_address[function_address_not_called]),
-        )
-
-
-def parse_functions(parent_functions_: parent_functions.Functions) -> Functions:
-    # calculate cumulative function stack usages
-    stack_grow_cumulative_by_function_address = parse_stack_grow_cumulative_by_function_address(parent_functions_)
-
-    # build new functions
-    functions_ = [
-        Function(
-            address=parent_function.address,
-            names=parent_function.names,
-            stack_grow=parent_function.stack_grow,
-            stack_grow_cumulative=stack_grow_cumulative_by_function_address[parent_function.address],
-            call_addresses=parent_function.call_addresses,
-        )
-        for parent_function in parent_functions_.inner
-    ]
-
-    return Functions(functions_)
-
-
-def parse_stack_grow_cumulative_by_function_address(
-    parent_functions_: parent_functions.Functions,
-) -> Mapping[Address, int]:
-    stack_grow_cumulative_by_function_address = dict[Address, int]()
-
-    while True:
-        changed = False
-
-        # not yet resolved
-        functions_unresolved = [
-            function
-            for function in parent_functions_.inner
-            if function.address not in stack_grow_cumulative_by_function_address
-        ]
-
-        # try each unresolved function
-        for function in functions_unresolved:
-            # if all callees are not resolved - skip for now
-            if not function.call_addresses <= stack_grow_cumulative_by_function_address.keys():
-                continue
-
-            # all our calls are resolved, so we can resolve ourselves
-
-            # our cumulative stack grow is our stack grow + stack grow of the biggest call
-            stack_grow_cumulative = function.stack_grow + max(
-                (stack_grow_cumulative_by_function_address[call_address] for call_address in function.call_addresses),
-                default=0,
-            )
-
-            # store information that we have resolved ourselves
-            stack_grow_cumulative_by_function_address[function.address] = stack_grow_cumulative
-            changed = True
-
-        if not changed:
-            break
-
-    # all functions must be resolved
-    # if they are not - it means there is a cycle in the graph
-    function_addresses_unresolved = (
-        parent_functions_.by_address.keys() - stack_grow_cumulative_by_function_address.keys()
-    )
-    if function_addresses_unresolved:
-        raise ValueError(
-            "Unable to resolve functions cumulative stack usage. "
-            "This usually mean there is a cycle in call graph (ex. recursion). "
-            f"Functions affected: {", ".join(
-                function_like_format(parent_functions_.by_address[function_address_unresolved])
-                for function_address_unresolved in function_addresses_unresolved)
-            }"
-        )
-
-    return stack_grow_cumulative_by_function_address
 
 
 def parse_entrypoints(parent_entrypoints_: parent_entrypoints.Entrypoints, functions: Functions) -> Entrypoints:

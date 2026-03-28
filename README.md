@@ -93,7 +93,7 @@ A typical config looks like:
 
 ```jsonc
 {
-    "stack_depth_analyzer_version": 1,
+    "stack_depth_analyzer": "elf_arm_thumbv6m_cortex_m0:v1",
     "entrypoints": {
         "default_handler": "DefaultHandler", // or DefaultHandler_, depending on version
         "nmi": false, // NMI is guaranteed not to fire

@@ -6,8 +6,9 @@ from elftools.elf.elffile import ELFFile
 from elftools.elf.sections import Section
 from more_itertools import one
 
-from ..common import function_like_format
-from ..functions.model import Function, Functions
+from app.elf_arm_thumbv6m.common import function_like_format
+from app.elf_arm_thumbv6m.functions.model import Function, Functions
+
 from .config import (
     Config,
     ConfigDefaultHandler,

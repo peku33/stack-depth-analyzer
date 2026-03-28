@@ -1,0 +1,73 @@
+from graphviz import Digraph
+
+from .model import Function
+
+
+def function_to_graphviz(function: Function) -> Digraph:
+    dot = Digraph(
+        name=" / ".join(function.names),
+    )
+
+    dot.node(  # pyright: ignore[reportUnknownMemberType]
+        "Entry",
+        shape="invtriangle",
+    )
+
+    if function.returns:
+        dot.node(  # pyright: ignore[reportUnknownMemberType]
+            "Return",
+            shape="triangle",
+        )
+
+    # instruction nodes
+    for function_instruction in function.instructions.inner:
+        dot.node(  # pyright: ignore[reportUnknownMemberType]
+            str(function_instruction.function_offset),
+            label=(
+                f"{function_instruction.instruction} "
+                f"(stack = {function_instruction.stack_grow}) "
+                f"@ {function_instruction.function_offset}"
+            ),
+        )
+
+    # call target
+    call_addresses = {
+        call_addresses
+        for function_instruction in function.instructions.inner
+        for call_addresses in function_instruction.call_addresses
+    }
+    for call_address in call_addresses:
+        dot.node(  # pyright: ignore[reportUnknownMemberType]
+            str(call_address),
+            label=f"Callee 0x{call_address:04x}",
+            shape="circle",
+        )
+
+    # Entrypoint edge
+    dot.edge(  # pyright: ignore[reportUnknownMemberType]
+        "Entry",
+        str(0),
+    )
+
+    # Flow (and return), call edges
+    for function_instruction in function.instructions.inner:
+        if function_instruction.function_offsets_next is not None:
+            for function_offsets_next in function_instruction.function_offsets_next:
+                dot.edge(  # pyright: ignore[reportUnknownMemberType]
+                    str(function_instruction.function_offset),
+                    str(function_offsets_next),
+                )
+        else:
+            dot.edge(  # pyright: ignore[reportUnknownMemberType]
+                str(function_instruction.function_offset),
+                "Return",
+            )
+
+        for call_address in function_instruction.call_addresses:
+            # TODO: mark if function returns or not
+            dot.edge(  # pyright: ignore[reportUnknownMemberType]
+                str(function_instruction.function_offset),
+                str(call_address),
+            )
+
+    return dot  # type: ignore
