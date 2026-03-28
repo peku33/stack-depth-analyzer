@@ -8,7 +8,6 @@ from itertools import chain
 
 from rich.console import Console
 from rich.logging import RichHandler
-from rich.markup import escape
 from rich.style import Style
 from rich.text import Text
 from rich.traceback import install
@@ -49,7 +48,7 @@ def function_name_format(name: str) -> Text:
     # last item should be function name - highlight it
     # NOTE: technically parts could be empty right now, but this is super unlikely
     part_format_function_name = Text(
-        escape(parts[-1]),
+        parts[-1],
         style=Style(
             bold=True,
         ),
@@ -57,7 +56,7 @@ def function_name_format(name: str) -> Text:
     del parts[-1]
 
     # others - treat them normally
-    parts_format_path = [Text(escape(part)) for part in parts]
+    parts_format_path = [Text(part) for part in parts]
 
     # combine
     format_ = Text("::").join(

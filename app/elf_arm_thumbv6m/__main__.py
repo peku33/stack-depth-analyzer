@@ -1,7 +1,6 @@
 from pathlib import Path
 from typing import Annotated
 
-from rich.markup import escape
 from rich.panel import Panel
 from rich.rule import Rule
 from rich.style import Style
@@ -73,7 +72,7 @@ def display_entrypoints(entrypoints: Entrypoints) -> None:
             Text(
                 (
                     "Priority Group: "
-                    f"{escape(entrypoints_priority_group.name)} "
+                    f"{entrypoints_priority_group.name} "
                     f"({entrypoints_priority_group.stack_grow}B stack grow)"
                 ),
                 style="yellow",
@@ -86,7 +85,7 @@ def display_entrypoints(entrypoints: Entrypoints) -> None:
             entrypoints_priority_group_node.add(
                 Text(
                     "Entrypoint: "
-                    f"{escape(entrypoint.name)} @ 0x{entrypoint.address:04X} "
+                    f"{entrypoint.name} @ 0x{entrypoint.address:04X} "
                     f"({entrypoint.stack_grow}B stack grow)"
                 ),
                 style=Style(
@@ -145,7 +144,7 @@ def display_call_tree(program: Program) -> None:
             Text(
                 (
                     "Priority Group: "
-                    f"{escape(entrypoints_priority_group.name)} "
+                    f"{entrypoints_priority_group.name} "
                     f"({entrypoints_priority_group.stack_grow}B stack grow)"
                 ),
                 style="yellow",
@@ -156,7 +155,7 @@ def display_call_tree(program: Program) -> None:
             entrypoint_node = entrypoints_priority_group_node.add(
                 Text(
                     "Entrypoint: "
-                    f"{escape(entrypoint.name)} @ 0x{entrypoint.address:04X} "
+                    f"{entrypoint.name} @ 0x{entrypoint.address:04X} "
                     f"({entrypoint.stack_grow}B stack grow)"
                 ),
                 # dim out if this is not the hot path
