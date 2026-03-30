@@ -9,12 +9,14 @@ from ...instructions_decoder.model import (
     Instruction,
     InstructionAddRegisterT2,
     InstructionAddSpPlusRegisterT1,
+    InstructionAdrT1,
     InstructionBlT1,
     InstructionBlxRegisterT1,
     InstructionBT1,
     InstructionBT2,
     InstructionBxT1,
     InstructionLdrLiteralT1,
+    InstructionLdrRegisterT1,
     InstructionLslImmediateT1,
     InstructionMovRegisterT1,
     InstructionPopT1,
@@ -85,21 +87,21 @@ def resolve(
 
     match instruction:
         case InstructionAddRegisterT2():
-            if instruction.dn is Register4.PC:
-                # PC = PC + register
-                effect_branch = resolve_add_register_t2_pc(cursor_function_region_instructions)
-
-                return effect_branch
-
-            return None
-        case InstructionAddSpPlusRegisterT1():
-            if instruction.dm is Register4.PC:
-                # PC = SP + PC ???
-
-                # not seen in the wild
-                raise ResolveUnsupportedInstructionException(instruction, address)
-            else:
+            if instruction.dn is not Register4.PC:
                 return None
+
+            # PC = PC + register
+            effect_branch = resolve_add_register_t2_pc(cursor_function_region_instructions)
+
+            return effect_branch
+        case InstructionAddSpPlusRegisterT1():
+            if instruction.dm is not Register4.PC:
+                return None
+
+            # PC = SP + PC ???
+            # not seen in the wild
+            raise ResolveUnsupportedInstructionException(instruction, address)
+
         case InstructionBT1():
             # current position + branch-pc offset (4) + instruction immediate
             target_function_offset = cursor_function_region_instructions.function_offset() + 4 + instruction.imm * 2
@@ -139,23 +141,26 @@ def resolve(
             # other patterns not seen in the wild
             raise ResolveUnsupportedInstructionException(instruction, address)
         case InstructionMovRegisterT1():
-            if instruction.d is Register4.PC:
-                # PC = register
-
-                # special case - MOV PC, LR is technically a return
-                if instruction.m is Register4.LR:
-                    return EffectReturn()
-
-                # other patterns not seen in the wild
-                raise ResolveUnsupportedInstructionException(instruction, address)
-            else:
+            if instruction.d is not Register4.PC:
                 return None
-        case InstructionPopT1():
-            if instruction.pc:
-                # POP PC
+
+            # PC = register
+
+            # special case - MOV PC, LR is technically a return
+            if instruction.m is Register4.LR:
                 return EffectReturn()
 
-            return None
+            # PC = register (non-LR)
+            # requires non-trivial handling (eg. jump table via ADR + LDR register)
+            effect_branch = resolve_mov_register_t1_pc(cursor_function_region_instructions)
+
+            return effect_branch
+        case InstructionPopT1():
+            if not instruction.pc:
+                return None
+
+            # POP PC
+            return EffectReturn()
         case InstructionUdfT1():
             return EffectInvalid()
         case InstructionUdfT2():
@@ -208,8 +213,8 @@ def resolve_add_register_t2_pc(cursor_function_region_instructions: CursorFuncti
 
     effects_branch = {
         effect_branch
-        for effect_branch in (resolver(cursor_function_region_instructions) for resolver in RESOLVERS)
-        if effect_branch is not None
+        for resolver in RESOLVERS
+        if (effect_branch := resolver(cursor_function_region_instructions)) is not None
     }
     match list(effects_branch):
         case []:
@@ -365,12 +370,10 @@ def resolve_add_register_t2_pc_offset_table(
     # data region must not be empty and we started from the beginning
     assert target_instruction_offsets
 
-    instruction_function_offset = cursor_function_region_instructions.function_offset()
-
     # convert to function-relative offsets
     # use current instruction offset + 4 (pc on next instruction) + offset from current instruction
     target_function_offsets = {
-        instruction_function_offset + 4 + target_instruction_offset
+        cursor_function_region_instructions.function_offset() + 4 + target_instruction_offset
         for target_instruction_offset in target_instruction_offsets
     }
 
@@ -404,8 +407,8 @@ def resolve_blx_register_t1(
     # they may return the same effect (will be flattened by set comprehensions)
     effects_call = {
         effect_call
-        for effect_call in (resolver(cursor_function_region_instructions) for resolver in RESOLVERS)
-        if effect_call is not None
+        for resolver in RESOLVERS
+        if (effect_call := resolver(cursor_function_region_instructions)) is not None
     }
     match list(effects_call):
         case []:
@@ -494,14 +497,14 @@ def resolve_blx_register_t1_pc_relative_load(
             )
 
             # resolve data region containing target address
-            cursor_function_region_data_target = (
-                cursor_function_region_instructions_modifying.cursor_function.region_data(data_function_offset)
+            cursor_function_region_data = cursor_function_region_instructions_modifying.cursor_function.region_data(
+                data_function_offset
             )
-            if cursor_function_region_data_target is None:
+            if cursor_function_region_data is None:
                 return None
 
             # get the address
-            target_address, _ = cursor_function_region_data_target.read_word_unsigned()
+            target_address, _ = cursor_function_region_data.read_word_unsigned()
 
             # lsb bit must always be set to signify thumb execution
             if target_address & 1 != 1:
@@ -519,3 +522,187 @@ def resolve_blx_register_t1_pc_relative_load(
         case _:
             # unsupported instruction
             return None
+
+
+def resolve_mov_register_t1_pc(
+    cursor_function_region_instructions: CursorFunctionRegionInstructions,
+) -> EffectBranch:
+    RESOLVERS = [
+        resolve_mov_register_t1_pc_adr_table,
+    ]
+
+    effects_branch = {
+        effect_branch
+        for resolver in RESOLVERS
+        if (effect_branch := resolver(cursor_function_region_instructions)) is not None
+    }
+    match list(effects_branch):
+        case []:
+            # no resolver resolved anything
+            address = cursor_function_region_instructions.address()
+
+            raise ResolveMovRegisterT1PcUnknownException(address)
+        case [effect_branch]:
+            # one or many resolver resolved our target effect
+
+            return effect_branch
+        case _:
+            # multiple resolvers resolved multiple effects
+            assert False
+
+
+def resolve_mov_register_t1_pc_adr_table(
+    cursor_function_region_instructions: CursorFunctionRegionInstructions,
+) -> EffectBranch | None:
+    # register contains jump table index [0 - ?]
+    # lsls register_index, register_source, #0x2 # multiplies jump table index by 4 (word size)
+    # adr register_base, #imm # loads word-aligned address pointing to the data table
+    # ldr register_index, [register_base, register_index] # loads absolute address from jump table
+    # mov pc, register_index # branches to the loaded address
+    # data region containing absolute addresses (with thumb bit set)
+    #
+    # solve this by examining the pattern backwards from mov pc and extracting absolute addresses from data region
+
+    # parse the mov pc, register - this should always be true as it was what caused entry to this block
+    instruction = cursor_function_region_instructions.instruction()
+    match instruction:
+        case InstructionMovRegisterT1():
+            assert instruction.d is Register4.PC
+
+            # extract the register, cast it to Register3 (all other instructions operate on 3-bit only)
+            register_index = instruction.m.to_register3()
+            if register_index is None:
+                # is not R0-R7?
+                return None
+        case _:
+            # so who and why called us?
+            assert False
+
+    # parse ldr register_index, [register_base, register_index]
+    cursor_function_region_instructions_ldr = cursor_function_region_instructions.previous()
+    if cursor_function_region_instructions_ldr is None:
+        # function ended prematurely?
+        return None
+    instruction_ldr = cursor_function_region_instructions_ldr.instruction()
+    match instruction_ldr:
+        case InstructionLdrRegisterT1():
+            # we've got LDR register, [register, register]
+
+            # target register must be our index register
+            if instruction_ldr.t is not register_index:
+                return None
+            # offset register must be our index register
+            if instruction_ldr.m is not register_index:
+                return None
+
+            # extract the base register
+            register_base = instruction_ldr.n
+        case _:
+            # other instruction
+            return None
+
+    # parse adr register_base, #imm
+    cursor_function_region_instructions_adr = cursor_function_region_instructions_ldr.previous()
+    if cursor_function_region_instructions_adr is None:
+        # function ended prematurely?
+        return None
+    instruction_adr = cursor_function_region_instructions_adr.instruction()
+    match instruction_adr:
+        case InstructionAdrT1():
+            # we've got ADR
+
+            # destination register must be our base register
+            if instruction_adr.d is not register_base:
+                return None
+        case _:
+            # other instruction
+            return None
+
+    # parse lsls register_index, register_source, #0x2
+    cursor_function_region_instructions_lsls = cursor_function_region_instructions_adr.previous()
+    if cursor_function_region_instructions_lsls is None:
+        # function ended prematurely?
+        return None
+    instruction_lsls = cursor_function_region_instructions_lsls.instruction()
+    match instruction_lsls:
+        case InstructionLslImmediateT1():
+            # we've got LSLS
+
+            # destination must be our index register
+            if instruction_lsls.d is not register_index:
+                return None
+            # shift must be 2 (multiply by 4 for word-sized entries)
+            if instruction_lsls.imm != 2:
+                return None
+        case _:
+            # other instruction
+            return None
+
+    # instruction pattern matches, now resolve the data table address from ADR
+    data_function_offset = (
+        (cursor_function_region_instructions_adr.function_offset() + 4) & ~0b11
+    ) + instruction_adr.imm * 4  # Align(PC, 4)
+
+    # resolve data region containing the jump table
+    cursor_function_region_data = cursor_function_region_instructions.cursor_function.region_data(data_function_offset)
+    if cursor_function_region_data is None:
+        # region covering this address does not exist?
+        return None
+    if cursor_function_region_data.function_region_data_offset != 0:
+        # is not at the beginning of the data region?
+        return None
+
+    # extract all branch targets (absolute addresses)
+    target_addresses = set[Address]()
+    cursor_function_region_data_item: CursorFunctionRegionData | None = cursor_function_region_data
+    while True:
+        # we reached end of data region
+        if cursor_function_region_data_item is None:
+            break
+
+        # load absolute address and advance cursor
+        target_address, cursor_function_region_data_item = cursor_function_region_data_item.read_word_unsigned()
+
+        # skip zero entries (padding / sentinel)
+        if target_address == 0:
+            continue
+
+        # thumb bit (LSB) must be set for valid branch targets
+        if target_address & 1 != 1:
+            raise ValueError(
+                f"Thumb bit not set for jump table entry at {cursor_function_region_instructions}? "
+                "This would cause a HardFault..."
+            )
+
+        # clear it to align to the address
+        target_address &= ~1
+
+        target_addresses.add(target_address)
+
+    # data region must not be empty
+    assert target_addresses
+
+    # convert absolute target addresses to function-relative-addresses
+    target_function_offsets = {
+        target_address
+        - cursor_function_region_instructions.address()
+        + cursor_function_region_instructions.function_offset()
+        for target_address in target_addresses
+    }
+
+    return EffectBranch(
+        conditional=False,
+        target_function_offsets=frozenset(target_function_offsets),
+    )
+
+
+class ResolveMovRegisterT1PcUnknownException(ResolveException):
+    def __init__(self, address: Address) -> None:
+        super().__init__(address, self._format_message(address))
+
+    @classmethod
+    def _format_message(cls, address: Address) -> str:
+        return (
+            f"Unable to automatically resolve target of MOV PC, Register instruction at 0x{address:04X}.\n"
+            "Please open an issue to help us improve this tool, providing as many details as possible."
+        )

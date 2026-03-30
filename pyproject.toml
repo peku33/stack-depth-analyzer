@@ -1,6 +1,6 @@
 [project]
 name = "stack-depth-analyzer"
-version = "0.2.2"
+version = "0.2.3"
 authors = [{ name = "Paweł Kubrak", email = "peku33@gmail.com" }]
 requires-python = "~3.13"
 dynamic = ["dependencies"]

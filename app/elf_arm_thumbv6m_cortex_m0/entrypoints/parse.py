@@ -241,10 +241,8 @@ def resolve_default_handler_function(functions: Functions, config: ConfigDefault
             # get all functions matching our predefined names list
             default_handler_functions = [
                 function
-                for function in (
-                    functions.by_name.get(default_handler_name) for default_handler_name in _DEFAULT_HANDLER_NAMES
-                )
-                if function is not None
+                for default_handler_name in _DEFAULT_HANDLER_NAMES
+                if (function := functions.by_name.get(default_handler_name)) is not None
             ]
 
             # we should have exactly one match

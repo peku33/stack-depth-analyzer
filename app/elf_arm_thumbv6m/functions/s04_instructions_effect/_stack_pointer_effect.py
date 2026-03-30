@@ -5,6 +5,7 @@ from ...instructions_decoder.model import (
     Instruction,
     InstructionAddSpPlusImmediateT2,
     InstructionAddSpPlusRegisterT1,
+    InstructionAddSpPlusRegisterT2,
     InstructionMovRegisterT1,
     InstructionMsrRegisterT1,
     InstructionPopT1,
@@ -47,6 +48,9 @@ def resolve(cursor_function_region_instructions: CursorFunctionRegionInstruction
                 raise ResolveUnsupportedInstructionException(instruction, address)
 
             return None
+        case InstructionAddSpPlusRegisterT2():
+            # SP = SP + m
+            raise ResolveUnsupportedInstructionException(instruction, address)
         case InstructionMovRegisterT1():
             if instruction.d is Register4.SP:
                 # SP = m
