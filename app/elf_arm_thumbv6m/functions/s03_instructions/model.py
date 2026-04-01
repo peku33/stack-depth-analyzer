@@ -1,7 +1,7 @@
 from collections.abc import Collection, Sequence, Set
 from dataclasses import dataclass
 from functools import cached_property
-from itertools import pairwise
+from itertools import accumulate, chain, pairwise
 
 from more_itertools import all_unique, is_sorted, last, mark_ends
 
@@ -29,20 +29,21 @@ class FunctionRegionInstructions:
         return last(self.instructions_with_function_offsets)[2]
 
     @cached_property
+    def instruction_function_offsets(self) -> Sequence[Address]:
+        return list(accumulate(instruction.size() for instruction in self.instructions))
+
+    @cached_property
     def instructions_with_function_offsets(
         self,
     ) -> Sequence[tuple[Instruction, Address, Address]]:  # (instruction, region start offset, region end offset)
-        instructions_with_function_offsets = list[tuple[Instruction, Address, Address]]()
-
-        function_offset = 0
-        for instruction in self.instructions:
-            instruction_size = instruction.size()
-            instructions_with_function_offsets.append(
-                (instruction, function_offset, function_offset + instruction_size)
+        return [
+            (instruction, function_offset_start, function_offset_end)
+            for instruction, (function_offset_start, function_offset_end) in zip(
+                self.instructions,
+                pairwise(chain([0], self.instruction_function_offsets)),
+                strict=True,
             )
-            function_offset += instruction_size
-
-        return instructions_with_function_offsets
+        ]
 
 
 @dataclass(frozen=True, kw_only=True)

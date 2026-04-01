@@ -120,11 +120,9 @@ def resolve(
             )
         case InstructionBlT1():
             # current address + branch-pc offset (4) + instruction immediate
-            target_address = address + 4 + instruction.imm * 2
+            effect_call = resolve_bl_t1(cursor_function_region_instructions)
 
-            return EffectCall(
-                target_addresses=frozenset([target_address]),
-            )
+            return effect_call
         case InstructionBlxRegisterT1():
             # PC = register
             # requires non-trivial handling
@@ -393,6 +391,47 @@ class ResolveAddRegisterT2PcUnknownException(ResolveException):
             f"Unable to automatically resolve target of ADD PC, Register instruction at 0x{address:04X}.\n"
             "Please open an issue to help us improve this tool, providing as many details as possible."
         )
+
+
+def resolve_bl_t1(cursor_function_region_instructions: CursorFunctionRegionInstructions) -> EffectCall:
+    # this instruction is usually a direct call to another function start. however in some rare cases I observed it's
+    # being used as trampoline, so BL -> BL -> target function.
+
+    # continue iterating while we are in the same function and pointing to BL T1 function. first iteration will is how
+    # we got there, so it must be a pass.
+    target_address: Address | None = None
+    while True:
+        instruction = cursor_function_region_instructions.instruction()
+        match instruction:
+            case InstructionBlT1():
+                # get address of instruction we are pointing to
+                target_instruction_offset = 4 + instruction.imm * 2
+                target_function_offset = (
+                    cursor_function_region_instructions.function_offset() + target_instruction_offset
+                )
+                target_address = cursor_function_region_instructions.address() + target_instruction_offset
+
+                # continue, if we are still within function boundary, exit if we are outside
+                if not 0 <= target_function_offset <= cursor_function_region_instructions.cursor_function.function.size:
+                    break
+
+                cursor_function_region_instructions_next = (
+                    cursor_function_region_instructions.cursor_function.region_instructions(target_function_offset)
+                )
+
+                if cursor_function_region_instructions_next is None:
+                    break
+
+                cursor_function_region_instructions = cursor_function_region_instructions_next
+            case _:
+                # exit if we are on another instruction
+                break
+
+    assert target_address is not None
+
+    return EffectCall(
+        target_addresses=frozenset([target_address]),
+    )
 
 
 def resolve_blx_register_t1(

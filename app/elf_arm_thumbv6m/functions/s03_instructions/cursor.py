@@ -1,4 +1,4 @@
-from bisect import bisect
+from bisect import bisect, bisect_left
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from functools import cached_property
@@ -12,6 +12,43 @@ from .model import Function, FunctionRegionData, FunctionRegionInstructions
 @dataclass(frozen=True, kw_only=True)
 class CursorFunction:
     function: Function
+
+    def region_instructions(self, function_offset: Address) -> "CursorFunctionRegionInstructions | None":
+        assert function_offset >= 0
+
+        # # region in function
+        # find region index (possibly) containing function_offset
+        function_regions_index = bisect(self._function_region_offsets, function_offset) - 1
+
+        # get the region
+        function_region = self.function.regions.inner[function_regions_index]
+
+        # validate if this is a instructions region
+        if type(function_region) is not FunctionRegionInstructions:
+            return None
+
+        # validate region left boundary (should be guaranteed by bisect + fact that we always have region at offset 0)
+        assert function_region.function_offset <= function_offset
+
+        # validate region right boundary
+        if function_offset >= function_region.function_offset + function_region.size:
+            return None
+
+        # # index of instruction in region
+        function_region_function_offset = function_offset - function_region.function_offset
+        function_region_instructions_index = bisect_left(
+            function_region.instruction_function_offsets, function_region_function_offset
+        )
+        assert (
+            function_region.instruction_function_offsets[function_region_instructions_index]
+            == function_region_function_offset
+        )
+
+        return CursorFunctionRegionInstructions(
+            cursor_function=self,
+            function_regions_index=function_regions_index,
+            function_region_instructions_index=function_region_instructions_index,
+        )
 
     def region_data(self, function_offset: Address) -> "CursorFunctionRegionData | None":
         assert function_offset >= 0
