@@ -120,9 +120,9 @@ def resolve(
             )
         case InstructionBlT1():
             # current address + branch-pc offset (4) + instruction immediate
-            effect_call = resolve_bl_t1(cursor_function_region_instructions)
+            effect = resolve_bl_t1(cursor_function_region_instructions)
 
-            return effect_call
+            return effect
         case InstructionBlxRegisterT1():
             # PC = register
             # requires non-trivial handling
@@ -393,41 +393,37 @@ class ResolveAddRegisterT2PcUnknownException(ResolveException):
         )
 
 
-def resolve_bl_t1(cursor_function_region_instructions: CursorFunctionRegionInstructions) -> EffectCall:
-    # this instruction is usually a direct call to another function start. however in some rare cases I observed it's
-    # being used as trampoline, so BL -> BL -> target function.
+def resolve_bl_t1(cursor_function_region_instructions: CursorFunctionRegionInstructions) -> Effect:
+    # this instruction is usually a direct call to another function start. however in large functions it's sometimes
+    # used inside the function boundary to make extended-range branch.
 
-    # continue iterating while we are in the same function and pointing to BL T1 function. first iteration will is how
-    # we got there, so it must be a pass.
-    target_address: Address | None = None
-    while True:
+    # for now if the target is inside current function, we treat it as a branch. if it goes outside, we treat it as a
+    # call. TODO: LR is overwritten, when this is happening. This would be a problem, if a function then uses this link
+    # register to return (usually it uses LR previously stored on stack using PUSH, and than POPs it to PC).
+
         instruction = cursor_function_region_instructions.instruction()
         match instruction:
             case InstructionBlT1():
-                # get address of instruction we are pointing to
+                # if we land inside the same function, lets treat it as a branch. if we land outside, lets treat it as a
+            # call
                 target_instruction_offset = 4 + instruction.imm * 2
-                target_function_offset = (
-                    cursor_function_region_instructions.function_offset() + target_instruction_offset
+
+            # check if we land inside the same function
+                target_function_offset = cursor_function_region_instructions.function_offset() + target_instruction_offset
+                if 0 <= target_function_offset < cursor_function_region_instructions.cursor_function.function.size:
+                return EffectBranch(
+                    conditional=False,
+                    target_function_offsets=frozenset([target_function_offset]),
                 )
+
+            # we land outside, calculate target address
                 target_address = cursor_function_region_instructions.address() + target_instruction_offset
-
-                # continue, if we are still within function boundary, exit if we are outside
-                if not 0 <= target_function_offset <= cursor_function_region_instructions.cursor_function.function.size:
-                    break
-
-                cursor_function_region_instructions_next = (
-                    cursor_function_region_instructions.cursor_function.region_instructions(target_function_offset)
-                )
-
-                if cursor_function_region_instructions_next is None:
-                    break
-
-                cursor_function_region_instructions = cursor_function_region_instructions_next
+return EffectCall(
+                target_addresses=frozenset([target_address]),
+            )
             case _:
-                # exit if we are on another instruction
-                break
-
-    assert target_address is not None
+                # how we ended up here?
+    assert False
 
     return EffectCall(
         target_addresses=frozenset([target_address]),
