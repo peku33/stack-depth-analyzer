@@ -401,29 +401,29 @@ def resolve_bl_t1(cursor_function_region_instructions: CursorFunctionRegionInstr
     # call. TODO: LR is overwritten, when this is happening. This would be a problem, if a function then uses this link
     # register to return (usually it uses LR previously stored on stack using PUSH, and than POPs it to PC).
 
-        instruction = cursor_function_region_instructions.instruction()
-        match instruction:
-            case InstructionBlT1():
-                # if we land inside the same function, lets treat it as a branch. if we land outside, lets treat it as a
+    instruction = cursor_function_region_instructions.instruction()
+    match instruction:
+        case InstructionBlT1():
+            # if we land inside the same function, lets treat it as a branch. if we land outside, lets treat it as a
             # call
-                target_instruction_offset = 4 + instruction.imm * 2
+            target_instruction_offset = 4 + instruction.imm * 2
 
             # check if we land inside the same function
-                target_function_offset = cursor_function_region_instructions.function_offset() + target_instruction_offset
-                if 0 <= target_function_offset < cursor_function_region_instructions.cursor_function.function.size:
+            target_function_offset = cursor_function_region_instructions.function_offset() + target_instruction_offset
+            if 0 <= target_function_offset < cursor_function_region_instructions.cursor_function.function.size:
                 return EffectBranch(
                     conditional=False,
                     target_function_offsets=frozenset([target_function_offset]),
                 )
 
             # we land outside, calculate target address
-                target_address = cursor_function_region_instructions.address() + target_instruction_offset
-return EffectCall(
+            target_address = cursor_function_region_instructions.address() + target_instruction_offset
+            return EffectCall(
                 target_addresses=frozenset([target_address]),
             )
-            case _:
-                # how we ended up here?
-    assert False
+        case _:
+            # how we ended up here?
+            assert False
 
     return EffectCall(
         target_addresses=frozenset([target_address]),
@@ -593,6 +593,7 @@ def resolve_mov_register_t1_pc_adr_table(
     # lsls register_index, register_source, #0x2 # multiplies jump table index by 4 (word size)
     # adr register_base, #imm # loads word-aligned address pointing to the data table
     # ldr register_index, [register_base, register_index] # loads absolute address from jump table
+    # < some instructions preparing registers before branch >
     # mov pc, register_index # branches to the loaded address
     # data region containing absolute addresses (with thumb bit set)
     #
@@ -614,27 +615,45 @@ def resolve_mov_register_t1_pc_adr_table(
             assert False
 
     # parse ldr register_index, [register_base, register_index]
+    # rewind irrelevant instructions until:
+    # - we found instruction altering the register_index
+    # - we reached beginning of function
     cursor_function_region_instructions_ldr = cursor_function_region_instructions.previous()
-    if cursor_function_region_instructions_ldr is None:
-        # function ended prematurely?
-        return None
-    instruction_ldr = cursor_function_region_instructions_ldr.instruction()
-    match instruction_ldr:
-        case InstructionLdrRegisterT1():
-            # we've got LDR register, [register, register]
-
-            # target register must be our index register
-            if instruction_ldr.t is not register_index:
-                return None
-            # offset register must be our index register
-            if instruction_ldr.m is not register_index:
-                return None
-
-            # extract the base register
-            register_base = instruction_ldr.n
-        case _:
-            # other instruction
+    while True:
+        # we reached beginning of a function
+        if cursor_function_region_instructions_ldr is None:
             return None
+
+        instruction_ldr = cursor_function_region_instructions_ldr.instruction()
+        match instruction_ldr:
+            case InstructionLdrRegisterT1():
+                # we've got LDR. is it register_index, [register_base, register_index]?
+
+                # target register must be our index register, otherwhise keep looking
+                if instruction_ldr.t is register_index:
+
+                    # offset register must be our index register
+                    if instruction_ldr.m is not register_index:
+                        return None
+
+                    # extract the base register
+                    register_base = instruction_ldr.n
+
+                    # found!
+                    break
+            case _:
+                # other instruction. continue searching if it doesn't affect our register_index. skip searching if it
+                # does.
+                instruction_ldr_affected_registers3 = {
+                    affected_register3
+                    for affected_register in instruction_ldr.affects_registers()
+                    if (affected_register3 := affected_register.to_register3()) is not None
+                }
+                if register_index in instruction_ldr_affected_registers3:
+                    return None
+
+        # continue searching
+        cursor_function_region_instructions_ldr = cursor_function_region_instructions_ldr.previous()
 
     # parse adr register_base, #imm
     cursor_function_region_instructions_adr = cursor_function_region_instructions_ldr.previous()
