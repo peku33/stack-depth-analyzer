@@ -3,15 +3,17 @@ from collections.abc import Set
 from dataclasses import dataclass
 from enum import IntEnum
 from itertools import chain
-from typing import Self
+from typing import Literal, Self, assert_never
+
+type MemoryAccessSize = Literal[1, 2, 4]  # bytes
 
 
-class InstructionUndefined(Exception):
+class InstructionUndefined(Exception):  # noqa: N818
     def __init__(self) -> None:
         super().__init__("undefined instruction")
 
 
-class InstructionUnpredictable(Exception):
+class InstructionUnpredictable(Exception):  # noqa: N818
     def __init__(self) -> None:
         super().__init__("unpredictable instruction")
 
@@ -215,7 +217,7 @@ class BaseInstructionLdrImmediate(Instruction16):
 
     @classmethod
     @abstractmethod
-    def load_size(cls) -> int:
+    def load_size(cls) -> MemoryAccessSize:
         pass
 
     def __str__(self) -> str:
@@ -228,9 +230,9 @@ class BaseInstructionLdrImmediate(Instruction16):
             case 4:
                 suffix = ""
             case _:
-                assert False
+                assert_never(load_size)
 
-        return f"LDR{suffix} {self.t}, [{self.n}{f', #0x{(self.imm * load_size):0X}' if self.imm else ''}]"
+        return f"LDR{suffix} {self.t}, [{self.n}{f", #0x{(self.imm * load_size):0X}" if self.imm else ""}]"
 
     def affects_registers(self) -> Set[Register4]:
         return {Register4.from_register3(self.t)}
@@ -249,7 +251,7 @@ class BaseInstructionLdrRegister(Instruction16):
 
     @classmethod
     @abstractmethod
-    def load_size(cls) -> int:
+    def load_size(cls) -> MemoryAccessSize:
         pass
 
     def __str__(self) -> str:
@@ -267,7 +269,7 @@ class BaseInstructionLdrRegister(Instruction16):
             case 4:
                 pass
             case _:
-                assert False
+                assert_never(load_size)
 
         return f"LDR{suffix} {self.t}, [{self.n}, {self.m}]"
 
@@ -283,7 +285,7 @@ class BaseInstructionStrImmediate(Instruction16):
 
     @classmethod
     @abstractmethod
-    def store_size(cls) -> int:
+    def store_size(cls) -> MemoryAccessSize:
         pass
 
     def __str__(self) -> str:
@@ -296,9 +298,9 @@ class BaseInstructionStrImmediate(Instruction16):
             case 4:
                 suffix = ""
             case _:
-                assert False
+                assert_never(store_size)
 
-        return f"STR{suffix} {self.t}, [{self.n}{f', #0x{(self.imm * store_size):0X}' if self.imm else ''}]"
+        return f"STR{suffix} {self.t}, [{self.n}{f", #0x{(self.imm * store_size):0X}" if self.imm else ""}]"
 
     def affects_registers(self) -> Set[Register4]:
         return set()
@@ -312,7 +314,7 @@ class BaseInstructionStrRegister(Instruction16):
 
     @classmethod
     @abstractmethod
-    def store_size(cls) -> int:
+    def store_size(cls) -> MemoryAccessSize:
         pass
 
     def __str__(self) -> str:
@@ -325,7 +327,7 @@ class BaseInstructionStrRegister(Instruction16):
             case 4:
                 suffix = ""
             case _:
-                assert False
+                assert_never(store_size)
 
         return f"STR{suffix} {self.t}, [{self.n}, {self.m}]"
 
@@ -601,7 +603,8 @@ class InstructionCmpRegisterT2(Instruction16):
 
     def __post_init__(self) -> None:
         assert not (self.n.value < 8 and self.m.value < 8)
-        assert not (self.n is Register4.PC or self.m is Register4.PC)
+        assert self.n is not Register4.PC
+        assert self.m is not Register4.PC
 
     def __str__(self) -> str:
         return f"CMP {self.n}, {self.m}"
@@ -668,9 +671,9 @@ class InstructionLdmT1(Instruction16):
         assert self.registers
 
     def __str__(self) -> str:
-        return f"LDM {self.n}{'!' if self.n not in self.registers else ''}, {{{''.join(
-            str(register3) for register3 in Register3 if register3 in self.registers
-        )}}}"
+        return f"LDM {self.n}{"!" if self.n not in self.registers else ""}, {{{
+            "".join(str(register3) for register3 in Register3 if register3 in self.registers)
+        }}}"
 
     def affects_registers(self) -> Set[Register4]:
         return {Register4.from_register3(register) for register in chain([self.n], self.registers)}
@@ -681,7 +684,7 @@ class InstructionLdrImmediateT1(BaseInstructionLdrImmediate):
     # A6.7.26 LDR (immediate) T1
 
     @classmethod
-    def load_size(cls) -> int:
+    def load_size(cls) -> MemoryAccessSize:
         return 4
 
 
@@ -692,7 +695,7 @@ class InstructionLdrImmediateT2(Instruction16):
     imm: int  # NOTE: multiplied by 4
 
     def __str__(self) -> str:
-        return f"LDR {self.t}, [SP{f', #0x{(self.imm * 4):0X}' if self.imm else ''}]"
+        return f"LDR {self.t}, [SP{f", #0x{(self.imm * 4):0X}" if self.imm else ""}]"
 
     def affects_registers(self) -> Set[Register4]:
         return {Register4.from_register3(self.t)}
@@ -720,7 +723,7 @@ class InstructionLdrRegisterT1(BaseInstructionLdrRegister):
         return False
 
     @classmethod
-    def load_size(cls) -> int:
+    def load_size(cls) -> MemoryAccessSize:
         return 4
 
 
@@ -729,7 +732,7 @@ class InstructionLdrbImmediateT1(BaseInstructionLdrImmediate):
     # A6.7.29 LDRB (immediate) T1
 
     @classmethod
-    def load_size(cls) -> int:
+    def load_size(cls) -> MemoryAccessSize:
         return 1
 
 
@@ -742,7 +745,7 @@ class InstructionLdrbRegisterT1(BaseInstructionLdrRegister):
         return False
 
     @classmethod
-    def load_size(cls) -> int:
+    def load_size(cls) -> MemoryAccessSize:
         return 1
 
 
@@ -751,7 +754,7 @@ class InstructionLdrhImmediateT1(BaseInstructionLdrImmediate):
     # A6.7.31 LDRH (immediate) T1
 
     @classmethod
-    def load_size(cls) -> int:
+    def load_size(cls) -> MemoryAccessSize:
         return 2
 
 
@@ -764,7 +767,7 @@ class InstructionLdrhRegisterT1(BaseInstructionLdrRegister):
         return False
 
     @classmethod
-    def load_size(cls) -> int:
+    def load_size(cls) -> MemoryAccessSize:
         return 2
 
     def __str__(self) -> str:
@@ -780,7 +783,7 @@ class InstructionLdrsbRegisterT1(BaseInstructionLdrRegister):
         return True
 
     @classmethod
-    def load_size(cls) -> int:
+    def load_size(cls) -> MemoryAccessSize:
         return 1
 
 
@@ -793,7 +796,7 @@ class InstructionLdrshRegisterT1(BaseInstructionLdrRegister):
         return True
 
     @classmethod
-    def load_size(cls) -> int:
+    def load_size(cls) -> MemoryAccessSize:
         return 2
 
 
@@ -911,10 +914,14 @@ class InstructionPopT1(Instruction16):
         assert self.pc or self.registers3
 
     def __str__(self) -> str:
-        return f"POP {{{', '.join(chain(
-            (str(register3) for register3 in Register3 if register3 in self.registers3),
-            [str(Register4.PC)] if self.pc else [],
-        ))}}}"
+        return f"POP {{{
+            ", ".join(
+                chain(
+                    (str(register3) for register3 in Register3 if register3 in self.registers3),
+                    [str(Register4.PC)] if self.pc else [],
+                )
+            )
+        }}}"
 
     def affects_registers(self) -> Set[Register4]:
         return set(
@@ -936,10 +943,14 @@ class InstructionPushT1(Instruction16):
         assert self.lr or self.registers3
 
     def __str__(self) -> str:
-        return f"PUSH {{{', '.join(chain(
-            (str(register3) for register3 in Register3 if register3 in self.registers3),
-            [str(Register4.LR)] if self.lr else [],
-        ))}}}"
+        return f"PUSH {{{
+            ", ".join(
+                chain(
+                    (str(register3) for register3 in Register3 if register3 in self.registers3),
+                    [str(Register4.LR)] if self.lr else [],
+                )
+            )
+        }}}"
 
     def affects_registers(self) -> Set[Register4]:
         return {Register4.SP}
@@ -1023,9 +1034,7 @@ class InstructionStmT1(Instruction16):
         assert self.registers
 
     def __str__(self) -> str:
-        return f"STM {self.n}!, {{{''.join(
-            str(register3) for register3 in Register3 if register3 in self.registers
-        )}}}"
+        return f"STM {self.n}!, {{{"".join(str(register3) for register3 in Register3 if register3 in self.registers)}}}"
 
     def affects_registers(self) -> Set[Register4]:
         return {Register4.from_register3(self.n)}
@@ -1036,7 +1045,7 @@ class InstructionStrImmediateT1(BaseInstructionStrImmediate):
     # A6.7.59 STR (immediate) T1
 
     @classmethod
-    def store_size(cls) -> int:
+    def store_size(cls) -> MemoryAccessSize:
         return 4
 
 
@@ -1047,7 +1056,7 @@ class InstructionStrImmediateT2(Instruction16):
     imm: int  # NOTE: multiplied by 4
 
     def __str__(self) -> str:
-        return f"STR {self.t}, [SP{f', #0x{(self.imm * 4):0X}' if self.imm else ''}]"
+        return f"STR {self.t}, [SP{f", #0x{(self.imm * 4):0X}" if self.imm else ""}]"
 
     def affects_registers(self) -> Set[Register4]:
         return set()
@@ -1058,7 +1067,7 @@ class InstructionStrRegisterT1(BaseInstructionStrRegister):
     # A6.7.60 STR (register) T1
 
     @classmethod
-    def store_size(cls) -> int:
+    def store_size(cls) -> MemoryAccessSize:
         return 4
 
 
@@ -1067,7 +1076,7 @@ class InstructionStrbImmediateT1(BaseInstructionStrImmediate):
     # A6.7.61 STRB (immediate) T1
 
     @classmethod
-    def store_size(cls) -> int:
+    def store_size(cls) -> MemoryAccessSize:
         return 1
 
 
@@ -1076,7 +1085,7 @@ class InstructionStrbRegisterT1(BaseInstructionStrRegister):
     # A6.7.62 STRB (register) T1
 
     @classmethod
-    def store_size(cls) -> int:
+    def store_size(cls) -> MemoryAccessSize:
         return 1
 
 
@@ -1085,7 +1094,7 @@ class InstructionStrhImmediateT1(BaseInstructionStrImmediate):
     # A6.7.63 STRH (immediate) T1
 
     @classmethod
-    def store_size(cls) -> int:
+    def store_size(cls) -> MemoryAccessSize:
         return 2
 
 
@@ -1094,7 +1103,7 @@ class InstructionStrhRegisterT1(BaseInstructionStrRegister):
     # A6.7.64 STRH (register) T1
 
     @classmethod
-    def store_size(cls) -> int:
+    def store_size(cls) -> MemoryAccessSize:
         return 2
 
 
@@ -1256,7 +1265,7 @@ class InstructionCpsT1(Instruction16):
     im: bool
 
     def __str__(self) -> str:
-        return f"CPSI{'E' if self.im else 'D'} i"
+        return f"CPSI{"E" if self.im else "D"} i"
 
     def affects_registers(self) -> Set[Register4]:
         return set()

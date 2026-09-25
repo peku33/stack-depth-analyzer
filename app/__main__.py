@@ -1,6 +1,6 @@
 from importlib import metadata
 
-from typer import Typer
+from typer import Typer, echo
 
 from . import _cli as _  # noqa: F401
 from .elf_arm_thumbv6m.__main__ import app as elf_arm_thumbv6m
@@ -32,7 +32,7 @@ app.add_typer(
 def version() -> None:
     version_ = metadata.version("stack-depth-analyzer")
 
-    print(version_)
+    echo(version_)
 
 
 if __name__ == "__main__":

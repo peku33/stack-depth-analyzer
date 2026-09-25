@@ -9,11 +9,11 @@ from .model import Function, FunctionRegionCode, FunctionRegionData, FunctionReg
 
 
 def parse(parent_functions: parent.Functions, elffile: ELFFile) -> Functions:
-    text_section = cast(Section | None, elffile.get_section_by_name(".text"))  # type: ignore
+    text_section = cast(Section | None, elffile.get_section_by_name(".text"))  # type: ignore[no-untyped-call]
     if text_section is None:
         raise ValueError("Section `.text` is missing.")
 
-    text = cast(bytes, text_section.data())  # type: ignore
+    text = cast(bytes, text_section.data())  # type: ignore[no-untyped-call]
     text_offset = cast(int, text_section.header["sh_addr"])  # pyright: ignore[reportUnknownMemberType]
 
     functions = [parse_function(parent_function, text, text_offset) for parent_function in parent_functions.inner]

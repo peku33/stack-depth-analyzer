@@ -113,9 +113,11 @@ def resolve_stack_grow_cumulative_by_function_address(
         raise ValueError(
             "Unable to resolve functions cumulative stack usage. "
             "This usually mean there is a cycle in call graph (ex. recursion). "
-            f"Functions affected: {", ".join(
-                function_like_format(parent_functions_.by_address[function_address_unresolved])
-                for function_address_unresolved in function_addresses_unresolved)
+            f"Functions affected: {
+                ", ".join(
+                    function_like_format(parent_functions_.by_address[function_address_unresolved])
+                    for function_address_unresolved in function_addresses_unresolved
+                )
             }"
         )
 

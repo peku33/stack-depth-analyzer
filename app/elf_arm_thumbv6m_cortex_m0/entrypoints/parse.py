@@ -1,6 +1,6 @@
 from collections.abc import Iterator
 from logging import getLogger
-from typing import cast
+from typing import assert_never, cast
 
 from elftools.elf.elffile import ELFFile
 from elftools.elf.sections import Section
@@ -47,7 +47,7 @@ def parse(elffile: ELFFile, functions: Functions, config: Config) -> Entrypoints
     # we use non-reserved values only
     vector_table = resolve_vector_table_section(elffile)
 
-    vector_table_bytes = cast(bytes, vector_table.data())  # type: ignore
+    vector_table_bytes = cast(bytes, vector_table.data())  # type: ignore[no-untyped-call]
     if len(vector_table_bytes) % 4 != 0:
         raise ValueError(f"Weird size of vector table section ({len(vector_table_bytes)}), should be divisible by 4.")
 
@@ -210,7 +210,7 @@ def resolve_vector_table_section(elffile: ELFFile) -> Section:
     # find all sections matching different toolchains
     sections = [
         section
-        for section in cast(Iterator[Section], elffile.iter_sections())  # type: ignore
+        for section in cast(Iterator[Section], elffile.iter_sections())  # type: ignore[no-untyped-call]
         if section.name in _VECTOR_TABLE_SECTION_NAMES
     ]
 
@@ -256,10 +256,8 @@ def resolve_default_handler_function(functions: Functions, config: ConfigDefault
                 case []:
                     # no matches
                     _logger.warning(
-                        (
-                            "None of auto-detected default handler names was found, defaulting to none. "
-                            "Functionality will be disabled."
-                        )
+                        "None of auto-detected default handler names was found, defaulting to none. "
+                        "Functionality will be disabled."
                     )
                     default_handler_function = None
                 case _:
@@ -291,7 +289,7 @@ def resolve_default_handler_function(functions: Functions, config: ConfigDefault
             if default_handler_function is None:
                 raise ValueError(f"Default handler function configured by name `{config.root}` was not found.")
         case _:
-            assert False
+            assert_never(config.root)
 
     return default_handler_function
 
@@ -326,7 +324,7 @@ def resolve_entrypoint_vector_from_config_exception_optional(
                 # function points to default handler, so we assume it won't be used
                 return None
         case _:
-            assert False
+            assert_never(config.root)
 
     return EntrypointVector(
         address=function.address,
@@ -380,7 +378,7 @@ def resolve_entrypoint_vector_with_priority_group_from_config_exception_configur
                 # function points to non-default handler, so we assume it will be used
                 priority_group = None
         case _:
-            assert False
+            assert_never(config.root)
 
     if priority_group is None:
         _logger.warning(
@@ -457,7 +455,7 @@ def resolve_entrypoint_interrupt_from_config_interrupt(
                 # function points to non-default handler, so we assume it will be used
                 priority_group = None
         case _:
-            assert False
+            assert_never(config_config.root)
 
     if priority_group is None:
         _logger.warning(

@@ -66,10 +66,10 @@ class EffectInvalid:
 type Effect = EffectBranch | EffectCall | EffectReturn | EffectInvalid
 
 
-class ResolveException(Exception):
+class ResolveError(Exception):
     _address: Address
 
-    def __init__(self, address: Address, message: str):
+    def __init__(self, address: Address, message: str) -> None:
         super().__init__(message)
 
         self._address = address
@@ -100,7 +100,7 @@ def resolve(
 
             # PC = SP + PC ???
             # not seen in the wild
-            raise ResolveUnsupportedInstructionException(instruction, address)
+            raise ResolveUnsupportedInstructionError(instruction, address)
 
         case InstructionBT1():
             # current position + branch-pc offset (4) + instruction immediate
@@ -137,7 +137,7 @@ def resolve(
                 return EffectReturn()
 
             # other patterns not seen in the wild
-            raise ResolveUnsupportedInstructionException(instruction, address)
+            raise ResolveUnsupportedInstructionError(instruction, address)
         case InstructionMovRegisterT1():
             if instruction.d is not Register4.PC:
                 return None
@@ -170,7 +170,7 @@ def resolve(
             return None
 
 
-class ResolveUnsupportedInstructionException(ResolveException):
+class ResolveUnsupportedInstructionError(ResolveError):
     _instruction: Instruction
 
     def __init__(self, instruction: Instruction, address: Address) -> None:
@@ -219,14 +219,14 @@ def resolve_add_register_t2_pc(cursor_function_region_instructions: CursorFuncti
             # no resolver resolved anything
             address = cursor_function_region_instructions.address()
 
-            raise ResolveAddRegisterT2PcUnknownException(address)
+            raise ResolveAddRegisterT2PcUnknownError(address)
         case [effect_branch]:
             # one or many resolver resolved our target effect
 
             return effect_branch
         case _:
             # multiple resolvers resolved multiple effects
-            assert False
+            raise AssertionError
 
 
 def resolve_add_register_t2_pc_offset_table(
@@ -258,7 +258,7 @@ def resolve_add_register_t2_pc_offset_table(
                 return None
         case _:
             # so who and why called us?
-            assert False
+            raise AssertionError
 
     # parse the lsls, register, register, #0x1
     cursor_function_region_instructions_lsls = cursor_function_region_instructions.previous()
@@ -381,7 +381,7 @@ def resolve_add_register_t2_pc_offset_table(
     )
 
 
-class ResolveAddRegisterT2PcUnknownException(ResolveException):
+class ResolveAddRegisterT2PcUnknownError(ResolveError):
     def __init__(self, address: Address) -> None:
         super().__init__(address, self._format_message(address))
 
@@ -423,7 +423,7 @@ def resolve_bl_t1(cursor_function_region_instructions: CursorFunctionRegionInstr
             )
         case _:
             # how we ended up here?
-            assert False
+            raise AssertionError
 
     return EffectCall(
         target_addresses=frozenset([target_address]),
@@ -450,17 +450,17 @@ def resolve_blx_register_t1(
             # no resolver resolved anything
             address = cursor_function_region_instructions.address()
 
-            raise ResolveBlxRegisterT1UnknownException(address)
+            raise ResolveBlxRegisterT1UnknownError(address)
         case [effect_call]:
             # one or many resolver resolved our target effect
 
             return effect_call
         case _:
             # multiple resolvers resolved multiple effects
-            assert False
+            raise AssertionError
 
 
-class ResolveBlxRegisterT1UnknownException(ResolveException):
+class ResolveBlxRegisterT1UnknownError(ResolveError):
     def __init__(self, address: Address) -> None:
         super().__init__(address, self._format_message(address))
 
@@ -497,7 +497,7 @@ def resolve_blx_register_t1_pc_relative_load(
             pass
         case _:
             # so who called us?
-            assert False
+            raise AssertionError
 
     # start from previous instruction, look for first thing that modifies the `register`
     cursor_function_region_instructions_modifying: CursorFunctionRegionInstructions | None = (
@@ -576,14 +576,14 @@ def resolve_mov_register_t1_pc(
             # no resolver resolved anything
             address = cursor_function_region_instructions.address()
 
-            raise ResolveMovRegisterT1PcUnknownException(address)
+            raise ResolveMovRegisterT1PcUnknownError(address)
         case [effect_branch]:
             # one or many resolver resolved our target effect
 
             return effect_branch
         case _:
             # multiple resolvers resolved multiple effects
-            assert False
+            raise AssertionError
 
 
 def resolve_mov_register_t1_pc_adr_table(
@@ -612,7 +612,7 @@ def resolve_mov_register_t1_pc_adr_table(
                 return None
         case _:
             # so who and why called us?
-            assert False
+            raise AssertionError
 
     # parse ldr register_index, [register_base, register_index]
     # rewind irrelevant instructions until:
@@ -631,7 +631,6 @@ def resolve_mov_register_t1_pc_adr_table(
 
                 # target register must be our index register, otherwhise keep looking
                 if instruction_ldr.t is register_index:
-
                     # offset register must be our index register
                     if instruction_ldr.m is not register_index:
                         return None
@@ -750,7 +749,7 @@ def resolve_mov_register_t1_pc_adr_table(
     )
 
 
-class ResolveMovRegisterT1PcUnknownException(ResolveException):
+class ResolveMovRegisterT1PcUnknownError(ResolveError):
     def __init__(self, address: Address) -> None:
         super().__init__(address, self._format_message(address))
 

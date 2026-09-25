@@ -1,6 +1,5 @@
 from collections.abc import Collection, Sequence, Set
-
-from typing_extensions import Self
+from typing import Self, assert_never
 
 from ...common import Address, function_like_format
 from ..s03_instructions import model as parent
@@ -68,16 +67,24 @@ def validate_functions(functions: Collection[Function]) -> None:
                     continue
 
     if function_calls_missing:
-        raise ValueError(f"Found calls to non-existing functions: {", ".join(
-            f"0x{call_address_from:04X} -> 0x{call_address_to:04X}"
-            for call_address_from, call_address_to in function_calls_missing
-        )}")
+        raise ValueError(
+            f"Found calls to non-existing functions: {
+                ", ".join(
+                    f"0x{call_address_from:04X} -> 0x{call_address_to:04X}"
+                    for call_address_from, call_address_to in function_calls_missing
+                )
+            }"
+        )
 
     if function_calls_invalid_return:
-        raise ValueError(f"Found impossible return address: {", ".join(
-            f"0x{call_address_from:04X} -> 0x{call_address_to:04X}"
-            for call_address_from, call_address_to in function_calls_invalid_return
-        )}")
+        raise ValueError(
+            f"Found impossible return address: {
+                ", ".join(
+                    f"0x{call_address_from:04X} -> 0x{call_address_to:04X}"
+                    for call_address_from, call_address_to in function_calls_invalid_return
+                )
+            }"
+        )
 
 
 def parse_function(parent_function: parent.Function, config: Config) -> Function:
@@ -96,12 +103,12 @@ def parse_function(parent_function: parent.Function, config: Config) -> Function
 
 class ParseFunctionInstructionsException(ExceptionGroup):
     _function: parent.Function
-    _inner: Sequence[_program_counter_effect.ResolveException | _stack_pointer_effect.ResolveException]
+    _inner: Sequence[_program_counter_effect.ResolveError | _stack_pointer_effect.ResolveError]
 
     def __new__(
         cls,
         function: parent.Function,
-        inner: Sequence[_program_counter_effect.ResolveException | _stack_pointer_effect.ResolveException],
+        inner: Sequence[_program_counter_effect.ResolveError | _stack_pointer_effect.ResolveError],
     ) -> Self:
         object_ = super().__new__(cls, cls._format_message(function), inner)
         object_._function = function
@@ -111,7 +118,7 @@ class ParseFunctionInstructionsException(ExceptionGroup):
     def __init__(
         self,
         function: parent.Function,
-        inner: Sequence[_program_counter_effect.ResolveException | _stack_pointer_effect.ResolveException],
+        inner: Sequence[_program_counter_effect.ResolveError | _stack_pointer_effect.ResolveError],
     ) -> None:
         super().__init__(self._format_message(function), inner)
 
@@ -125,7 +132,7 @@ class ParseFunctionInstructionsException(ExceptionGroup):
 
 def parse_function_instructions(cursor_function: CursorFunction, config: Config) -> FunctionInstructions:
     instructions = list[FunctionInstruction]()
-    exceptions = list[_program_counter_effect.ResolveException | _stack_pointer_effect.ResolveException]()
+    exceptions = list[_program_counter_effect.ResolveError | _stack_pointer_effect.ResolveError]()
 
     for parent_function_regions_index, parent_function_region in enumerate(cursor_function.function.regions.inner):
         if type(parent_function_region) is not parent.FunctionRegionInstructions:
@@ -140,14 +147,15 @@ def parse_function_instructions(cursor_function: CursorFunction, config: Config)
 
             try:
                 instruction_ = parse_function_instruction(cursor_function_region_instructions, config)
-            except (_program_counter_effect.ResolveException, _stack_pointer_effect.ResolveException) as exception:
+            except (_program_counter_effect.ResolveError, _stack_pointer_effect.ResolveError) as exception:
                 exceptions.append(exception)
             else:
                 instructions.append(instruction_)
 
     if exceptions:
         raise ParseFunctionInstructionsException(
-            cursor_function.function, exceptions  # pyright: ignore[reportArgumentType]
+            cursor_function.function,
+            exceptions,  # pyright: ignore[reportArgumentType]
         )
 
     # extra validations
@@ -178,12 +186,14 @@ def validate_function_instructions(instructions: Collection[FunctionInstruction]
 
     if flow_function_offsets_invalid:
         raise ValueError(
-            f"Found instruction flow / branch (not call) reaching instruction out of function boundaries: {", ".join(
-                f"+{function_offset_from} -> {", ".join(
-                    f"+{function_offset_to}" for function_offset_to in function_offsets_to)
-                }"
-                for function_offset_from, function_offsets_to in flow_function_offsets_invalid.items()
-            )}"
+            f"Found instruction flow / branch (not call) reaching instruction out of function boundaries: {
+                ", ".join(
+                    f"+{function_offset_from} -> {
+                        ", ".join(f"+{function_offset_to}" for function_offset_to in function_offsets_to)
+                    }"
+                    for function_offset_from, function_offsets_to in flow_function_offsets_invalid.items()
+                )
+            }"
         )
 
 
@@ -247,7 +257,7 @@ def parse_function_instruction(
                 function_offsets=function_offsets,
             )
         case _:
-            assert False
+            assert_never(program_counter_effect_)
 
     # stack pointer effects
     stack_grow = 0
@@ -260,7 +270,7 @@ def parse_function_instruction(
         case None:
             pass
         case _:
-            assert False
+            assert_never(stack_pointer_effect)
 
     return FunctionInstruction(
         function_offset=function_offset,

@@ -22,7 +22,7 @@ class Effect:
     add: int  # equivalent of SP = SP + add
 
 
-class ResolveException(Exception):
+class ResolveError(Exception):
     _address: Address
 
     def __init__(self, address: Address, message: str) -> None:
@@ -45,16 +45,16 @@ def resolve(cursor_function_region_instructions: CursorFunctionRegionInstruction
         case InstructionAddSpPlusRegisterT1():
             if instruction.dm is Register4.SP:
                 # SP = SP + SP ???
-                raise ResolveUnsupportedInstructionException(instruction, address)
+                raise ResolveUnsupportedInstructionError(instruction, address)
 
             return None
         case InstructionAddSpPlusRegisterT2():
             # SP = SP + m
-            raise ResolveUnsupportedInstructionException(instruction, address)
+            raise ResolveUnsupportedInstructionError(instruction, address)
         case InstructionMovRegisterT1():
             if instruction.d is Register4.SP:
                 # SP = m
-                raise ResolveUnsupportedInstructionException(instruction, address)
+                raise ResolveUnsupportedInstructionError(instruction, address)
 
             return None
         case InstructionPopT1():
@@ -68,11 +68,11 @@ def resolve(cursor_function_region_instructions: CursorFunctionRegionInstruction
         case InstructionMsrRegisterT1():
             if instruction.sys_m is SysM.CONTROL:
                 # switching SPSEL
-                raise ResolveUnsupportedInstructionException(instruction, address)
+                raise ResolveUnsupportedInstructionError(instruction, address)
 
             if instruction.sys_m in (SysM.MSP, SysM.PSP):
                 # MSP/PSP = n
-                raise ResolveUnsupportedInstructionException(instruction, address)
+                raise ResolveUnsupportedInstructionError(instruction, address)
 
             return None
         case InstructionSubSpMinusImmediateT1():
@@ -84,7 +84,7 @@ def resolve(cursor_function_region_instructions: CursorFunctionRegionInstruction
             return None
 
 
-class ResolveUnsupportedInstructionException(ResolveException):
+class ResolveUnsupportedInstructionError(ResolveError):
     _instruction: Instruction
 
     def __init__(self, instruction: Instruction, address: Address) -> None:

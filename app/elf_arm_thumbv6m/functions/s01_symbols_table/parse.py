@@ -15,7 +15,7 @@ from .model import Function, FunctionRegion, FunctionRegions, Functions
 def parse(elffile: ELFFile) -> Functions:
     section = cast(
         SymbolTableSection | None,
-        elffile.get_section_by_name(".symtab"),  # type: ignore
+        elffile.get_section_by_name(".symtab"),  # type: ignore[no-untyped-call]
     )
     if section is None:
         raise ValueError(
@@ -30,7 +30,7 @@ def parse(elffile: ELFFile) -> Functions:
     functions_by_address = dict[Address, tuple[int, set[str]]]()  # {address: (size, names)}
 
     # scan through all symbols and fill helper structures
-    for symbol in cast(Iterator[Symbol], section.iter_symbols()):  # type: ignore
+    for symbol in cast(Iterator[Symbol], section.iter_symbols()):  # type: ignore[no-untyped-call]
         name = cast(str, symbol.name)
 
         entry = cast(Mapping[str, Any], symbol.entry)

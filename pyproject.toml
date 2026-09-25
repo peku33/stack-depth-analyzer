@@ -2,7 +2,7 @@
 name = "stack-depth-analyzer"
 version = "0.2.5"
 authors = [{ name = "Paweł Kubrak", email = "peku33@gmail.com" }]
-requires-python = "~3.13"
+requires-python = ">=3.13,<3.14"
 dynamic = ["dependencies"]
 
 [project.scripts]
@@ -20,57 +20,57 @@ typer = "^0.24.0"
 
 
 [tool.poetry.group.dev.dependencies]
-black = "^26.0.0"
-flake8 = "^7.0.0"
-isort = "^8.0.0"
 mypy = "^1.17.1"
-pylint = "^4.0.0"
+ruff = "^0.16.9"
 
-[tool.black]
+[tool.ruff]
 line-length = 120
-target-version = ["py313"]
+target-version = "py313"
 
-[tool.isort]
-profile = "black"
-line_length = 120
+[tool.ruff.format]
+nested-string-quote-style = "preferred"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    # conflicting with each other or with the formatter
+    "COM812", # missing-trailing-comma, conflicts with the formatter
+    "D203",   # incorrect-blank-line-before-class, conflicts with D211
+    "D212",   # multi-line-summary-first-line, conflicts with D213
+    "PT015",  # pytest-assert-always-false, duplicates B011
+    # not matching the codebase style
+    "C901",    # complex-structure
+    "CPY001",  # missing-copyright-notice
+    "D1",      # undocumented-*
+    "EM101",   # raw-string-in-exception
+    "EM102",   # f-string-in-exception
+    "ERA001",  # commented-out-code, false positives on explanatory comments
+    "FBT001",  # boolean-type-hint-positional-argument
+    "FBT002",  # boolean-default-value-positional-argument
+    "FBT003",  # boolean-positional-value-in-call
+    "FIX002",  # line-contains-todo
+    "N806",    # non-lowercase-variable-in-function
+    "PLR0911", # too-many-return-statements
+    "PLR0912", # too-many-branches
+    "PLR0915", # too-many-statements
+    "PLR2004", # magic-value-comparison
+    "PLR5501", # collapsible-else-if
+    "PYI025",  # unaliased-collections-abc-set-import
+    "RET504",  # unnecessary-assign
+    "RET505",  # superfluous-else-return
+    "RSE102",  # unnecessary-paren-on-raise-exception
+    "S101",    # assert
+    "TC003",   # typing-only-standard-library-import
+    "TC006",   # runtime-cast-value
+    "TD002",   # missing-todo-author
+    "TD003",   # missing-todo-link
+    "TID252",  # relative-imports
+    "TRY003",  # raise-vanilla-args
+]
 
 [tool.mypy]
 python_version = "3.13"
 strict = true
-
-[tool.pylint.main]
-load-plugins = """
-    pylint.extensions.typing,
-"""
-
-[tool.pylint.format]
-max-line-length = "120"
-
-[tool.pylint.miscellaneous]
-notes = ["FIXME"]
-
-[tool.pylint.message_control]
-enable = "all"
-disable = """
-    duplicate-code,
-    invalid-name,
-    locally-disabled,
-    missing-class-docstring,
-    missing-function-docstring,
-    missing-module-docstring,
-    no-else-raise,
-    no-else-return,
-    suppressed-message,
-    too-few-public-methods,
-    too-many-branches,
-    too-many-lines,
-    too-many-locals,
-    too-many-return-statements,
-    too-many-statements,
-    unidiomatic-typecheck,
-    unsubscriptable-object,
-    use-implicit-booleaness-not-comparison-to-zero,
-"""
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

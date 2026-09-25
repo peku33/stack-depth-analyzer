@@ -236,7 +236,7 @@ class _RustV0Demangler:
 
         generic_args_ = path
         if generic_args:
-            generic_args_ += f"::<{', '.join(generic_args)}>"
+            generic_args_ += f"::<{", ".join(generic_args)}>"
 
         return generic_args_
 
@@ -245,7 +245,7 @@ class _RustV0Demangler:
             case "L":
                 lifetime = self._parse_lifetime()
 
-                return f"'_{lifetime if lifetime else ""}"
+                return f"'_{lifetime or ""}"
             case "K":
                 return self._parse_const()
             case _:
@@ -397,7 +397,7 @@ class _RustV0Demangler:
                 while not self._eat("E"):
                     types.append(self._parse_type())
 
-                return f"({', '.join(types)})"
+                return f"({", ".join(types)})"
             case "R":  # ref type
                 lifetime = self._parse_lifetime_opt()
                 type_ = self._parse_type()
@@ -443,10 +443,7 @@ class _RustV0Demangler:
 
         abi: str | None = None
         if self._eat("K"):
-            if self._eat("C"):
-                abi = "C"
-            else:
-                abi = self._parse_undisambiguated_identifier().replace("_", "-")
+            abi = "C" if self._eat("C") else self._parse_undisambiguated_identifier().replace("_", "-")
 
         params = list[str]()
         while not self._eat("E"):
@@ -456,12 +453,12 @@ class _RustV0Demangler:
 
         fn_sig = ""
         if binder:
-            fn_sig += f"for<{', '.join(f"'_{i + 1}" for i in range(binder))}> "
+            fn_sig += f"for<{", ".join(f"'_{i + 1}" for i in range(binder))}> "
         if is_unsafe:
             fn_sig += "unsafe "
         if abi:
             fn_sig += f'extern "{abi}" '
-        fn_sig += f"fn({', '.join(params)})"
+        fn_sig += f"fn({", ".join(params)})"
         if return_type != "()":
             fn_sig += f" -> {return_type}"
 
@@ -498,14 +495,14 @@ class _RustV0Demangler:
                 assoc_bindings.append(f"{name} = {type_}")
 
             if assoc_bindings:
-                trait_path += f"<{', '.join(assoc_bindings)}>"
+                trait_path += f"<{", ".join(assoc_bindings)}>"
             traits.append(trait_path)
 
         lifetime = self._parse_lifetime_opt()
 
         dyn_trait_type = "dyn "
         if binder:
-            dyn_trait_type += f"for<{', '.join(f"'_{i + 1}" for i in range(binder))}> "
+            dyn_trait_type += f"for<{", ".join(f"'_{i + 1}" for i in range(binder))}> "
         dyn_trait_type += " + ".join(traits)
         if lifetime:
             dyn_trait_type += f" + '_{lifetime}"

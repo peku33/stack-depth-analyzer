@@ -23,7 +23,7 @@ def instructions_from_opcodes(opcodes_bytes: bytes) -> Generator[model.Instructi
             try:
                 opcode_halfword_bytes_2 = next(opcodes_halfword_iterator)
             except StopIteration:
-                raise ValueError("32 bit instruction ended prematurely.")  # pylint: disable=raise-missing-from
+                raise ValueError("32 bit instruction ended prematurely.")  # noqa: B904
 
             opcode_word = int.from_bytes(chain(opcode_halfword_bytes_2, opcode_halfword_bytes), "little")
 
@@ -137,7 +137,7 @@ def instruction_from_opcode_halfword(opcode_halfword: int) -> model.Instruction1
                     return model.InstructionSubImmediateT2(rdn, imm)
                 case _:
                     raise model.InstructionUndefined()
-            assert False
+            raise AssertionError
         case [False, True, False, False, False, False]:
             # A5.2.2 Data processing
             opcode_2 = _bits_msb_from_int(opcode_halfword >> 6, 4)
@@ -239,8 +239,8 @@ def instruction_from_opcode_halfword(opcode_halfword: int) -> model.Instruction1
 
                     return model.InstructionMvnRegisterT1(rd, rm)
                 case _:
-                    assert False
-            assert False
+                    raise AssertionError
+            raise AssertionError
         case [False, True, False, False, False, True]:
             # A5.2.3 Special data instructions and branch and exchange
             opcode_2 = _bits_msb_from_int(opcode_halfword >> 6, 4)
@@ -295,7 +295,7 @@ def instruction_from_opcode_halfword(opcode_halfword: int) -> model.Instruction1
                     return model.InstructionBlxRegisterT1(rm4)
                 case _:
                     raise model.InstructionUndefined()
-            assert False
+            raise AssertionError
         case [False, True, False, False, True, _]:
             # A6.7.27 LDR (literal) T1
             rt = _register3_from_opcode(opcode_halfword, 8)
@@ -339,8 +339,8 @@ def instruction_from_opcode_halfword(opcode_halfword: int) -> model.Instruction1
                             # A6.7.34 LDRSH (register) T1
                             return model.InstructionLdrshRegisterT1(rt, rn, rm)
                         case _:
-                            assert False
-                    assert False
+                            raise AssertionError
+                    raise AssertionError
                 case [False, True, True, False]:
                     imm = _imm_from_opcode(opcode_halfword, 5, 6)
                     rn = _register3_from_opcode(opcode_halfword, 3)
@@ -354,8 +354,8 @@ def instruction_from_opcode_halfword(opcode_halfword: int) -> model.Instruction1
                             # A6.7.26 LDR (immediate) T1
                             return model.InstructionLdrImmediateT1(rt, rn, imm)
                         case _:
-                            assert False
-                    assert False
+                            raise AssertionError
+                    raise AssertionError
                 case [False, True, True, True]:
                     imm = _imm_from_opcode(opcode_halfword, 5, 6)
                     rn = _register3_from_opcode(opcode_halfword, 3)
@@ -369,8 +369,8 @@ def instruction_from_opcode_halfword(opcode_halfword: int) -> model.Instruction1
                             # A6.7.29 LDRB (immediate) T1
                             return model.InstructionLdrbImmediateT1(rt, rn, imm)
                         case _:
-                            assert False
-                    assert False
+                            raise AssertionError
+                    raise AssertionError
                 case [True, False, False, False]:
                     imm = _imm_from_opcode(opcode_halfword, 5, 6)
                     rn = _register3_from_opcode(opcode_halfword, 3)
@@ -384,8 +384,8 @@ def instruction_from_opcode_halfword(opcode_halfword: int) -> model.Instruction1
                             # A6.7.31 LDRH (immediate) T1
                             return model.InstructionLdrhImmediateT1(rt, rn, imm)
                         case _:
-                            assert False
-                    assert False
+                            raise AssertionError
+                    raise AssertionError
                 case [True, False, False, True]:
                     rt = _register3_from_opcode(opcode_halfword, 8)
                     imm = _imm_from_opcode(opcode_halfword, 8, 0)
@@ -398,11 +398,11 @@ def instruction_from_opcode_halfword(opcode_halfword: int) -> model.Instruction1
                             # A6.7.26 LDR (immediate) T2
                             return model.InstructionLdrImmediateT2(rt, imm)
                         case _:
-                            assert False
-                    assert False
+                            raise AssertionError
+                    raise AssertionError
                 case _:
                     raise model.InstructionUndefined()
-            assert False
+            raise AssertionError
         case [True, False, True, False, False, _]:
             # A6.7.6 ADR T1
             rd = _register3_from_opcode(opcode_halfword, 8)
@@ -523,10 +523,10 @@ def instruction_from_opcode_halfword(opcode_halfword: int) -> model.Instruction1
                             return model.InstructionSevT1()
                         case _:
                             raise model.InstructionUndefined()
-                    assert False
+                    raise AssertionError
                 case _:
                     raise model.InstructionUndefined()
-            assert False
+            raise AssertionError
         case [True, True, False, False, False, _]:
             # A6.7.58 STM, STMIA, STMEA T1
             rn = _register3_from_opcode(opcode_halfword, 8)
@@ -564,7 +564,7 @@ def instruction_from_opcode_halfword(opcode_halfword: int) -> model.Instruction1
                     imm = _imm_from_opcode(opcode_halfword, 8, 0, True)
 
                     return model.InstructionBT1(cond, imm)
-            assert False
+            raise AssertionError
         case [True, True, True, False, False, _]:
             # A6.7.10 B T2
             imm = _imm_from_opcode(opcode_halfword, 11, 0, True)
@@ -572,7 +572,7 @@ def instruction_from_opcode_halfword(opcode_halfword: int) -> model.Instruction1
             return model.InstructionBT2(imm)
         case _:
             raise model.InstructionUndefined()
-    assert False
+    raise AssertionError
 
 
 def instruction_from_opcode_word(opcode_word: int) -> model.Instruction32:
@@ -623,7 +623,7 @@ def instruction_from_opcode_word(opcode_word: int) -> model.Instruction32:
                                             return model.InstructionIsbT1(option)
                                         case _:
                                             raise model.InstructionUndefined()
-                                    assert False
+                                    raise AssertionError
                                 case [False, True, True, True, True, True, _]:
                                     # B4.2.2 MRS T1
                                     rd4 = _register4_from_opcode(opcode_word, 8)
@@ -643,7 +643,7 @@ def instruction_from_opcode_word(opcode_word: int) -> model.Instruction32:
                                     return model.InstructionUdfT2(imm)
                                 case _:
                                     raise model.InstructionUndefined()
-                            assert False
+                            raise AssertionError
                         case [True, _, True]:
                             # A6.7.13 BL T1
                             s = (opcode_word >> 26) & 0b1 == 1
@@ -660,22 +660,19 @@ def instruction_from_opcode_word(opcode_word: int) -> model.Instruction32:
                             return model.InstructionBlT1(imm)
                         case _:
                             raise model.InstructionUndefined()
-                    assert False
+                    raise AssertionError
                 case [False]:
                     raise model.InstructionUndefined()
                 case _:
-                    assert False
-            assert False
+                    raise AssertionError
+            raise AssertionError
         case _:
             raise model.InstructionUndefined()
-    assert False
+    raise AssertionError
 
 
 def _bits_msb_from_int(input_: int, output_bits: int) -> Sequence[bool]:
-    """
-    Converts `input_` integer into `output_bits` of boolean bits, assuming that first output value is MSB.
-    """
-
+    """Convert `input_` integer into `output_bits` of boolean bits, assuming that first output value is MSB."""
     output = [False] * output_bits
 
     for bit in range(output_bits):
@@ -685,9 +682,7 @@ def _bits_msb_from_int(input_: int, output_bits: int) -> Sequence[bool]:
 
 
 def _sint_from_bits_msb(bits: Sequence[bool]) -> int:
-    """
-    Converts `bits` into integer, assuming MSB go first and the value is signed.
-    """
+    """Convert `bits` into integer, assuming MSB go first and the value is signed."""
     assert bits
 
     output = 0
@@ -702,9 +697,7 @@ def _sint_from_bits_msb(bits: Sequence[bool]) -> int:
 
 
 def _register3_from_opcode(opcode: int, lsb_index: int) -> model.Register3:
-    """
-    Takes 3 bits, starting from `lsb_index` from `opcode` and converts them to 3-bit register (0-7).
-    """
+    """Take 3 bits, starting from `lsb_index` from `opcode` and convert them to 3-bit register (0-7)."""
     return model.Register3((opcode >> lsb_index) & 0b111)
 
 
@@ -717,25 +710,21 @@ def _registers3_from_opcode(opcode: int) -> Set[model.Register3]:
 
 
 def _register4_from_opcode(opcode: int, lsb_index: int) -> model.Register4:
-    """
-    Takes 4 bits, starting from `lsb_index` from `opcode` and converts them to 4-bit register (0-15).
-    """
+    """Take 4 bits, starting from `lsb_index` from `opcode` and convert them to 4-bit register (0-15)."""
     return model.Register4((opcode >> lsb_index) & 0b1111)
 
 
 def _register4_7210_from_opcode(opcode: int) -> model.Register4:
-    """
-    Converts bits 7, 2, 1, 0 of `opcode` into 4-bit register (0-15).
-    """
+    """Convert bits 7, 2, 1, 0 of `opcode` into 4-bit register (0-15)."""
     return model.Register4(((opcode >> 4) & 0b1000) | (opcode & 0b111))
 
 
 def _imm_from_opcode(opcode: int, width: int, lsb_index: int, signed: bool = False) -> int:
     """
-    Takes bits `width` bits from `opcode` starting at `lsb_index` and converts them to integer, either signed or
-    unsigned, depending on `signed` parameter.
-    """
+    Take `width` bits from `opcode` starting at `lsb_index` and convert them to integer.
 
+    The integer is signed or unsigned, depending on `signed` parameter.
+    """
     imm = (opcode >> lsb_index) & ((1 << width) - 1)
     if signed and (opcode & (1 << (lsb_index + width - 1))) > 0:
         imm = imm - (1 << width)

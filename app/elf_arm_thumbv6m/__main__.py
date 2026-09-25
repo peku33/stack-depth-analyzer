@@ -84,9 +84,7 @@ def display_entrypoints(entrypoints: Entrypoints) -> None:
         for entrypoint in entrypoints_priority_group.entrypoints:
             entrypoints_priority_group_node.add(
                 Text(
-                    "Entrypoint: "
-                    f"{entrypoint.name} @ 0x{entrypoint.address:04X} "
-                    f"({entrypoint.stack_grow}B stack grow)"
+                    f"Entrypoint: {entrypoint.name} @ 0x{entrypoint.address:04X} ({entrypoint.stack_grow}B stack grow)"
                 ),
                 style=Style(
                     color="green",
@@ -154,9 +152,7 @@ def display_call_tree(program: Program) -> None:
         for entrypoint in entrypoints_priority_group.entrypoints:
             entrypoint_node = entrypoints_priority_group_node.add(
                 Text(
-                    "Entrypoint: "
-                    f"{entrypoint.name} @ 0x{entrypoint.address:04X} "
-                    f"({entrypoint.stack_grow}B stack grow)"
+                    f"Entrypoint: {entrypoint.name} @ 0x{entrypoint.address:04X} ({entrypoint.stack_grow}B stack grow)"
                 ),
                 # dim out if this is not the hot path
                 style=Style(

@@ -28,22 +28,14 @@ jobs:
         run: |
           poetry install --no-interaction --no-root
 
-      - name: Run black
+      - name: Run ruff format
         run: |
-          poetry run black --check app
+          poetry run ruff format --check app
 
-      - name: Run isort
+      - name: Run ruff check
         run: |
-          poetry run isort --check-only app
-
-      - name: Run flake8
-        run: |
-          poetry run flake8 app
+          poetry run ruff check --output-format=github app
 
       - name: Run mypy
         run: |
           poetry run mypy app
-
-      - name: Run pylint
-        run: |
-          poetry run pylint app

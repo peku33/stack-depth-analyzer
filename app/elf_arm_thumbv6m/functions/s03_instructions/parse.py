@@ -1,3 +1,5 @@
+from typing import assert_never
+
 from ...instructions_decoder.parse import instructions_from_opcodes
 from ..s02_text_regions import model as parent
 from .model import Function, FunctionRegionData, FunctionRegionInstructions, FunctionRegions, Functions
@@ -55,4 +57,4 @@ def parse_function_region(
                 data=data,
             )
         case _:
-            assert False
+            assert_never(parent_function_region)

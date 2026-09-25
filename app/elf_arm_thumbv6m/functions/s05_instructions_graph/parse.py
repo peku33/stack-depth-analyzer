@@ -1,5 +1,5 @@
 from collections.abc import Mapping, Set
-from typing import cast
+from typing import assert_never, cast
 
 from ...common import Address
 from ..s04_instructions_effect import model as parent
@@ -138,7 +138,7 @@ def parse_function_instruction(
             function_offsets_next = None
             call_addresses = set[Address]()
         case _:
-            assert False
+            assert_never(parent_function_instruction.program_counter_effect)
 
     return FunctionInstruction(
         function_offset=parent_function_instruction.function_offset,

@@ -1,4 +1,5 @@
 from collections.abc import Collection
+from typing import assert_never
 
 from more_itertools import one
 
@@ -76,7 +77,7 @@ def parse_entrypoint(config: ConfigEntrypoint, functions: Functions, *, name_hin
             if function is None:
                 raise ValueError(f"Entrypoint function configured by name `{config.handler}` was not found.")
         case _:
-            assert False
+            assert_never(config.handler)
 
     # get interrupt name from user provided value (if set), otherwise from target function name, otherwise autogenerate
     name: str

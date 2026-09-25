@@ -110,9 +110,7 @@ class CursorFunctionRegionInstructions:
             self._function_region_instructions.function_offset  # region from function
             + self._function_region_instructions.instructions_with_function_offsets[
                 self.function_region_instructions_index
-            ][
-                1
-            ]  # instruction from region
+            ][1]  # instruction from region
         )
 
     def function_offset(self) -> Address:
@@ -124,9 +122,7 @@ class CursorFunctionRegionInstructions:
             self._function_region_instructions.function_offset  # region from function
             + self._function_region_instructions.instructions_with_function_offsets[
                 self.function_region_instructions_index
-            ][
-                2
-            ]  # instruction from region
+            ][2]  # instruction from region
         )
 
     def function_end_offset(self) -> Address:
@@ -203,7 +199,8 @@ class CursorFunctionRegionData:
 
     def read_unsigned(self, bytes_: int) -> tuple[int, Self | None]:
         # must be positive and be power of 2
-        assert bytes_ > 0 and (bytes_ & (bytes_ - 1)) == 0
+        assert bytes_ > 0
+        assert (bytes_ & (bytes_ - 1)) == 0
 
         # must be aligned
         if (
