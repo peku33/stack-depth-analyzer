@@ -23,7 +23,7 @@ from .program.parse import parse as program_parse
 
 def parse_path(elf_path: Path, config_path: Path) -> Program:
     with elf_path.open("rb") as elf_file:
-        elffile = ELFFile(elf_file)  # type: ignore[no-untyped-call]
+        elffile = ELFFile(elf_file)
 
         with config_path.open("r") as config_file:
             config = Config.model_validate_json(config_file.read())
@@ -74,14 +74,14 @@ def _extract_elffile_attributes(elffile: ELFFile) -> Mapping[str, Any]:
     # check arm attributes
     arm_attributes = cast(
         ARMAttributesSection | None,
-        elffile.get_section_by_name(".ARM.attributes"),  # type: ignore[no-untyped-call]
+        elffile.get_section_by_name(".ARM.attributes"),
     )
     if arm_attributes is None:
         raise ValueError("Missing `.ARM.attributes` section.")
 
     # we expect one "aeabi" subsection
     arm_attribute = one(
-        cast(Iterator[ARMAttributesSubsection], arm_attributes.iter_subsections()),  # type: ignore[no-untyped-call]
+        cast(Iterator[ARMAttributesSubsection], arm_attributes.iter_subsections()),
     )
     _assert_equals(
         "vendor_name",
@@ -91,7 +91,7 @@ def _extract_elffile_attributes(elffile: ELFFile) -> Mapping[str, Any]:
 
     # we expect one "FILE" subsection
     file_attribute = one(
-        cast(Iterator[ARMAttributesSubsubsection], arm_attribute.iter_subsubsections()),  # type: ignore[no-untyped-call]
+        cast(Iterator[ARMAttributesSubsubsection], arm_attribute.iter_subsubsections()),
     )
     file_attribute_header = cast(ARMAttribute, file_attribute.header)  # pyright: ignore[reportUnknownMemberType]
     _assert_equals(
@@ -101,8 +101,7 @@ def _extract_elffile_attributes(elffile: ELFFile) -> Mapping[str, Any]:
     )
 
     attributes = {
-        cast(str, attribute.tag): cast(Any, attribute.value)  # pyright: ignore[reportUnknownMemberType]
-        for attribute in cast(Iterator[ARMAttribute], file_attribute.iter_attributes())  # type: ignore[no-untyped-call]
+        attribute.tag: attribute.value for attribute in cast(Iterator[ARMAttribute], file_attribute.iter_attributes())
     }
 
     return attributes

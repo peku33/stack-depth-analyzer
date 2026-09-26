@@ -1,7 +1,6 @@
 from typing import cast
 
 from elftools.elf.elffile import ELFFile
-from elftools.elf.sections import Section
 
 from ...common import Address, function_like_format
 from ..s01_symbols_table import model as parent
@@ -9,11 +8,11 @@ from .model import Function, FunctionRegionCode, FunctionRegionData, FunctionReg
 
 
 def parse(parent_functions: parent.Functions, elffile: ELFFile) -> Functions:
-    text_section = cast(Section | None, elffile.get_section_by_name(".text"))  # type: ignore[no-untyped-call]
+    text_section = elffile.get_section_by_name(".text")
     if text_section is None:
         raise ValueError("Section `.text` is missing.")
 
-    text = cast(bytes, text_section.data())  # type: ignore[no-untyped-call]
+    text = text_section.data()
     text_offset = cast(int, text_section.header["sh_addr"])  # pyright: ignore[reportUnknownMemberType]
 
     functions = [parse_function(parent_function, text, text_offset) for parent_function in parent_functions.inner]

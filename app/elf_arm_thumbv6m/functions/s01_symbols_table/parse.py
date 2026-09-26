@@ -1,10 +1,10 @@
 from bisect import bisect_left, bisect_right
-from collections.abc import Iterator, Mapping, Set
+from collections.abc import Mapping, Set
 from itertools import chain, pairwise
 from typing import Any, cast
 
 from elftools.elf.elffile import ELFFile
-from elftools.elf.sections import Symbol, SymbolTableSection
+from elftools.elf.sections import SymbolTableSection
 from more_itertools import duplicates_everseen, first
 
 from ...common import Address, function_format
@@ -15,7 +15,7 @@ from .model import Function, FunctionRegion, FunctionRegions, Functions
 def parse(elffile: ELFFile) -> Functions:
     section = cast(
         SymbolTableSection | None,
-        elffile.get_section_by_name(".symtab"),  # type: ignore[no-untyped-call]
+        elffile.get_section_by_name(".symtab"),
     )
     if section is None:
         raise ValueError(
@@ -30,8 +30,8 @@ def parse(elffile: ELFFile) -> Functions:
     functions_by_address = dict[Address, tuple[int, set[str]]]()  # {address: (size, names)}
 
     # scan through all symbols and fill helper structures
-    for symbol in cast(Iterator[Symbol], section.iter_symbols()):  # type: ignore[no-untyped-call]
-        name = cast(str, symbol.name)
+    for symbol in section.iter_symbols():
+        name = symbol.name
 
         entry = cast(Mapping[str, Any], symbol.entry)
 

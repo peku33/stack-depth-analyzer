@@ -1,6 +1,5 @@
-from collections.abc import Iterator
 from logging import getLogger
-from typing import assert_never, cast
+from typing import assert_never
 
 from elftools.elf.elffile import ELFFile
 from elftools.elf.sections import Section
@@ -47,7 +46,7 @@ def parse(elffile: ELFFile, functions: Functions, config: Config) -> Entrypoints
     # we use non-reserved values only
     vector_table = resolve_vector_table_section(elffile)
 
-    vector_table_bytes = cast(bytes, vector_table.data())  # type: ignore[no-untyped-call]
+    vector_table_bytes = vector_table.data()
     if len(vector_table_bytes) % 4 != 0:
         raise ValueError(f"Weird size of vector table section ({len(vector_table_bytes)}), should be divisible by 4.")
 
@@ -208,11 +207,7 @@ def parse(elffile: ELFFile, functions: Functions, config: Config) -> Entrypoints
 
 def resolve_vector_table_section(elffile: ELFFile) -> Section:
     # find all sections matching different toolchains
-    sections = [
-        section
-        for section in cast(Iterator[Section], elffile.iter_sections())  # type: ignore[no-untyped-call]
-        if section.name in _VECTOR_TABLE_SECTION_NAMES
-    ]
+    sections = [section for section in elffile.iter_sections() if section.name in _VECTOR_TABLE_SECTION_NAMES]
 
     match sections:
         case []:

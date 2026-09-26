@@ -15,7 +15,7 @@ from .program.parse import parse as program_parse
 
 def parse_path(elf_path: Path, config_path: Path | None) -> Program:
     with elf_path.open("rb") as elf_file:
-        elffile = ELFFile(elf_file)  # type: ignore[no-untyped-call]
+        elffile = ELFFile(elf_file)
 
         if config_path is not None:
             with config_path.open("r") as config_file:
