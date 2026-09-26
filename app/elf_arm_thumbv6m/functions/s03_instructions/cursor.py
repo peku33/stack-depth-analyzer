@@ -208,13 +208,13 @@ class CursorFunctionRegionData:
             + self._function_region_data.function_offset
             + self.function_region_data_offset
         ) % bytes_ != 0:
-            raise ValueError(f"Attempted unaligned {bytes_} bytes access for {self}.")
+            raise ValueError(f"Attempted unaligned {bytes_} bytes access.")
 
         function_region_data_offset_end = self.function_region_data_offset + bytes_
 
         # end must not overflow
         if function_region_data_offset_end > self._function_region_data.size:
-            raise ValueError(f"Overflow for {bytes_} bytes access for {self}.")
+            raise ValueError(f"Overflow for {bytes_} bytes access.")
 
         value_bytes = self._function_region_data.data[
             self.function_region_data_offset : function_region_data_offset_end

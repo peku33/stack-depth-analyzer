@@ -310,15 +310,15 @@ def resolve_add_register_t2_pc_offset_table(
     if cursor_function_region_instructions_add is None:
         # function ended prematurely?
         return None
-    instructions_add = cursor_function_region_instructions_add.instruction()
-    match instructions_add:
+    instruction_add = cursor_function_region_instructions_add.instruction()
+    match instruction_add:
         case InstructionAddRegisterT2():
             # we've got ADD
 
             # arguments must match our patter
-            if instructions_add.dn is not Register4.from_register3(register):
+            if instruction_add.dn is not Register4.from_register3(register):
                 return None
-            if instructions_add.m is not Register4.PC:
+            if instruction_add.m is not Register4.PC:
                 return None
         case _:
             # other instruction
@@ -520,15 +520,20 @@ def resolve_blx_register_t1_pc_relative_load(
         # we've reached the beginning of the function and nobody set the value of the register
         return None
 
-    instructions_modifying = cursor_function_region_instructions_modifying.instruction()
-    match instructions_modifying:
+    instruction_modifying = cursor_function_region_instructions_modifying.instruction()
+    match instruction_modifying:
         case InstructionLdrLiteralT1():
             # target register must be our branch sources
-            assert Register4.from_register3(instructions_modifying.t) == instruction.m
+            assert Register4.from_register3(instruction_modifying.t) == instruction.m
 
-            # relative to current instruction address + 4 (instruction spec) + instruction immediate
+            # Align(PC, 4) + instruction immediate, where PC is current instruction address + 4 (instruction spec)
+            # alignment applies to absolute address, so convert it back to function offset afterwards
+            instruction_modifying_address = cursor_function_region_instructions_modifying.address()
             data_function_offset = (
-                cursor_function_region_instructions_modifying.function_offset() + 4 + instructions_modifying.imm * 4
+                ((instruction_modifying_address + 4) & ~0b11)
+                + instruction_modifying.imm * 4
+                - instruction_modifying_address
+                + cursor_function_region_instructions_modifying.function_offset()
             )
 
             # resolve data region containing target address
@@ -692,9 +697,14 @@ def resolve_mov_register_t1_pc_adr_table(
             return None
 
     # instruction pattern matches, now resolve the data table address from ADR
+    # Align(PC, 4) + imm, alignment applies to absolute address, so convert it back to function offset afterwards
+    instruction_adr_address = cursor_function_region_instructions_adr.address()
     data_function_offset = (
-        (cursor_function_region_instructions_adr.function_offset() + 4) & ~0b11
-    ) + instruction_adr.imm * 4  # Align(PC, 4)
+        ((instruction_adr_address + 4) & ~0b11)
+        + instruction_adr.imm * 4
+        - instruction_adr_address
+        + cursor_function_region_instructions_adr.function_offset()
+    )
 
     # resolve data region containing the jump table
     cursor_function_region_data = cursor_function_region_instructions.cursor_function.region_data(data_function_offset)
