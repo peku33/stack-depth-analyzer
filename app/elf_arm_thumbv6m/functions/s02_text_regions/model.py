@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from functools import cached_property
 from itertools import pairwise
 
-from more_itertools import all_unique, is_sorted, last, mark_ends
+from more_itertools import is_sorted, last, mark_ends
 
 from ...common import Address
 
@@ -111,6 +111,3 @@ class Functions:
             function.address + function.size <= function_next.address
             for function, function_next in pairwise(self.inner)
         )
-
-        # names must be unique
-        assert all_unique(name for function in self.inner for name in function.names)

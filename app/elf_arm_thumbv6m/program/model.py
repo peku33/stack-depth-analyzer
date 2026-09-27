@@ -2,7 +2,7 @@ from collections.abc import Collection, Mapping, Set
 from dataclasses import dataclass
 from functools import cached_property
 
-from more_itertools import all_unique, is_sorted
+from more_itertools import is_sorted
 
 from ..common import Address
 
@@ -53,9 +53,6 @@ class Functions:
             (function.address for function in self.inner),
             strict=True,
         )
-
-        # names must be unique
-        assert all_unique(name for function in self.inner for name in function.names)
 
         # call addresses must point to valid functions
         assert {

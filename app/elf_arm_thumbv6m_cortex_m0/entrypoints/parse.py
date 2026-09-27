@@ -237,7 +237,7 @@ def resolve_default_handler_function(functions: Functions, config: ConfigDefault
             default_handler_functions = [
                 function
                 for default_handler_name in _DEFAULT_HANDLER_NAMES
-                if (function := functions.by_name.get(default_handler_name)) is not None
+                for function in functions.by_name.get(default_handler_name, [])
             ]
 
             # we should have exactly one match
@@ -280,9 +280,17 @@ def resolve_default_handler_function(functions: Functions, config: ConfigDefault
                 raise ValueError(f"Default handler function configured by address 0x{config.root:04X} was not found.")
         case str():
             # name
-            default_handler_function = functions.by_name.get(config.root)
-            if default_handler_function is None:
-                raise ValueError(f"Default handler function configured by name `{config.root}` was not found.")
+            match functions.by_name.get(config.root, []):
+                case [default_handler_function]:
+                    pass
+                case []:
+                    raise ValueError(f"Default handler function configured by name `{config.root}` was not found.")
+                case default_handler_functions_:
+                    raise ValueError(
+                        f"Default handler function configured by name `{config.root}` is ambiguous, matching: "
+                        f"{", ".join(function_like_format(function) for function in default_handler_functions_)}. "
+                        "Configure it by address instead."
+                    )
         case _:
             assert_never(config.root)
 

@@ -5,7 +5,7 @@ from typing import Any, cast
 
 from elftools.elf.elffile import ELFFile
 from elftools.elf.sections import SymbolTableSection
-from more_itertools import duplicates_everseen, first
+from more_itertools import first
 
 from ...common import Address, function_format
 from .demangle import name_demangle
@@ -174,13 +174,6 @@ def parse(elffile: ELFFile) -> Functions:
                 f"Function {function_format(address, names)}, size {size} overlaps with next "
                 f"{function_format(address_next, names_next)}."
             )
-
-    # function names must be unique
-    names_duplicate = set(duplicates_everseen(name for _, names in functions_by_address.values() for name in names))
-    if names_duplicate:
-        raise ValueError(
-            f"Function names duplicated: {", ".join(f"`{name_duplicate}`" for name_duplicate in names_duplicate)}."
-        )
 
     functions_ = [
         Function(

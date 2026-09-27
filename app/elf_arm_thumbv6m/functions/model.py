@@ -2,7 +2,7 @@ from collections.abc import Collection, Mapping, Set
 from dataclasses import dataclass
 from functools import cached_property
 
-from more_itertools import all_unique, is_sorted
+from more_itertools import is_sorted
 
 from ..common import Address
 
@@ -46,9 +46,6 @@ class Functions:
             strict=True,
         )
 
-        # names must be unique
-        assert all_unique(name for function in self.inner for name in function.names)
-
         # call addresses must point to valid functions
         assert {
             call_address for function in self.inner for call_address in function.call_addresses
@@ -59,5 +56,10 @@ class Functions:
         return {function.address: function for function in self.inner}
 
     @cached_property
-    def by_name(self) -> Mapping[str, Function]:
-        return {name: function for function in self.inner for name in function.names}
+    def by_name(self) -> Mapping[str, Collection[Function]]:
+        # names are not guaranteed to be unique (eg. local symbols from different compilation units)
+        by_name = dict[str, list[Function]]()
+        for function in self.inner:
+            for name in function.names:
+                by_name.setdefault(name, []).append(function)
+        return by_name

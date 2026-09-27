@@ -3,6 +3,7 @@ from typing import assert_never
 
 from more_itertools import one
 
+from ..common import function_like_format
 from ..functions.model import Functions
 from .config import Config, ConfigEntrypoint, ConfigExceptionPriorityGroup, ConfigExceptionPriorityGroups
 from .model import Entrypoint, Entrypoints, EntrypointsExceptionPriorityGroup
@@ -73,9 +74,17 @@ def parse_entrypoint(config: ConfigEntrypoint, functions: Functions, *, name_hin
                 raise ValueError(f"Entrypoint function configured by address 0x{config.handler:04X} was not found.")
         case str():
             # name
-            function = functions.by_name.get(config.handler)
-            if function is None:
-                raise ValueError(f"Entrypoint function configured by name `{config.handler}` was not found.")
+            match functions.by_name.get(config.handler, []):
+                case [function]:
+                    pass
+                case []:
+                    raise ValueError(f"Entrypoint function configured by name `{config.handler}` was not found.")
+                case functions_:
+                    raise ValueError(
+                        f"Entrypoint function configured by name `{config.handler}` is ambiguous, matching: "
+                        f"{", ".join(function_like_format(function_) for function_ in functions_)}. "
+                        "Configure it by address instead."
+                    )
         case _:
             assert_never(config.handler)
 
