@@ -19,6 +19,7 @@ from .entrypoints.parse import parse as entrypoints_parse
 from .functions.parse import parse as functions_parse
 from .program.model import Program
 from .program.parse import parse as program_parse
+from .stack_available.parse import parse as stack_available_parse
 
 
 def parse_path(elf_path: Path, config_path: Path) -> Program:
@@ -40,7 +41,9 @@ def parse(elffile: ELFFile, config: Config) -> Program:
 
     entrypoints = entrypoints_parse(config.entrypoints, functions)
 
-    program = program_parse(functions, entrypoints)
+    stack_available = stack_available_parse(elffile)
+
+    program = program_parse(functions, entrypoints, stack_available)
 
     return program
 

@@ -11,7 +11,9 @@ _logger = getLogger(__name__)
 
 
 def parse(
-    parent_functions_: parent_functions.Functions, parent_entrypoints_: parent_entrypoints.Entrypoints
+    parent_functions_: parent_functions.Functions,
+    parent_entrypoints_: parent_entrypoints.Entrypoints,
+    stack_available: int | None,
 ) -> Program:
     # warn for orphaned functions
     warn_functions_unreachable(parent_functions_, parent_entrypoints_.addresses)
@@ -25,6 +27,7 @@ def parse(
     return Program(
         functions=functions,
         entrypoints=entrypoints,
+        stack_available=stack_available,
     )
 
 

@@ -28,7 +28,7 @@ def display_summary(program: Program) -> None:
     display_functions(program.functions)
     display_entrypoints(program.entrypoints)
     display_call_tree(program)
-    display_stack_size(program.stack_size)
+    display_stack_size(program.stack_size, program.stack_available)
 
 
 def display_functions(functions: Functions) -> None:
@@ -167,12 +167,28 @@ def display_call_tree(program: Program) -> None:
     console.print(tree)
 
 
-def display_stack_size(stack_size: int) -> None:
+def display_stack_size(stack_size: int, stack_available: int | None) -> None:
+    if stack_available is None:
+        text = Text(f"{stack_size} (available stack unknown)")
+        style = "green"
+    else:
+        stack_free = stack_available - stack_size
+        if stack_free >= 0:
+            # NOTE: stack_available > 0 here, unless both are 0
+            stack_free_ratio = stack_free / stack_available if stack_available > 0 else 0.0
+            text = Text(
+                f"{stack_size} of {stack_available} available, {stack_free} free ({stack_free_ratio:.1%} headroom)"
+            )
+            style = "green"
+        else:
+            text = Text(f"{stack_size} of {stack_available} available, OVERFLOW by {-stack_free}")
+            style = "red"
+
     console.print(
         Panel(
-            Text(f"{stack_size}"),
+            text,
             title="Whole program total stack usage (B)",
-            style="green",
+            style=style,
         )
     )
 

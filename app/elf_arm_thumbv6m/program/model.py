@@ -131,6 +131,7 @@ class Entrypoints:
 class Program:
     functions: Functions
     entrypoints: Entrypoints
+    stack_available: int | None
 
     def __post_init__(self) -> None:
         # all entrypoints must point to valid functions
@@ -139,6 +140,9 @@ class Program:
             for priority_group in self.entrypoints.priority_groups
             for entrypoint in priority_group.entrypoints
         } <= self.functions.by_address.keys()
+
+        # available stack (if known) must be positive
+        assert self.stack_available is None or self.stack_available >= 0
 
     @property
     def stack_size(self) -> int:

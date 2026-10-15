@@ -7,6 +7,7 @@ from elftools.elf.elffile import ELFFile
 from app.elf_arm_thumbv6m.functions.parse import parse as functions_parse
 from app.elf_arm_thumbv6m.parse import validate_elffile
 from app.elf_arm_thumbv6m.program.model import Program
+from app.elf_arm_thumbv6m.stack_available.parse import parse as stack_available_parse
 
 from .config import Config
 from .entrypoints.parse import parse as entrypoints_parse
@@ -38,6 +39,8 @@ def parse(elffile: ELFFile, config: Config | None) -> Program:
 
     entrypoints = entrypoints_parse(elffile, functions, config.entrypoints)
 
-    program = program_parse(functions, entrypoints)
+    stack_available = stack_available_parse(elffile)
+
+    program = program_parse(functions, entrypoints, stack_available)
 
     return program
